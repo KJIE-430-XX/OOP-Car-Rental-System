@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="18.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="C:\Car Rental System -- OOP\OOP-Car-Rental-System\build\_deps\asio-subbuild\CMakeFiles\33a166f73de0e2f3493017cfc4b2c592\generate.stamp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{25CE5B46-5091-39D3-A228-0A132938E642}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

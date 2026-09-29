@@ -1,0 +1,896 @@
+{
+	"configurations" : 
+	[
+		{
+			"abstractTargets" : 
+			[
+				{
+					"directoryIndex" : 1,
+					"id" : "Crow::@2c1e7a9ae0c1ce7a4691",
+					"jsonFile" : "target-Crow-Debug-9819a9f06f4688b5c001.json",
+					"name" : "Crow",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "Git::Git::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-Git__Git-Debug-deadef387777576da2c0.json",
+					"name" : "Git::Git",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "Python3::Interpreter::@2c1e7a9ae0c1ce7a4691",
+					"jsonFile" : "target-Python3__Interpreter-Debug-b0134f95d8dd04d21c7c.json",
+					"name" : "Python3::Interpreter",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "Python3::InterpreterMultiConfig::@2c1e7a9ae0c1ce7a4691",
+					"jsonFile" : "target-Python3__InterpreterMultiConfig-Debug-3e27d982863a3d137b72.json",
+					"name" : "Python3::InterpreterMultiConfig",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "Threads::Threads::@2c1e7a9ae0c1ce7a4691",
+					"jsonFile" : "target-Threads__Threads-Debug-c83aa9907cf8aeced820.json",
+					"name" : "Threads::Threads",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "asio::asio::@2c1e7a9ae0c1ce7a4691",
+					"jsonFile" : "target-asio__asio-Debug-96fbdac752618f1176e8.json",
+					"name" : "asio::asio",
+					"projectIndex" : 1
+				}
+			],
+			"directories" : 
+			[
+				{
+					"abstractTargetIndexes" : 
+					[
+						1
+					],
+					"build" : ".",
+					"childIndexes" : 
+					[
+						1
+					],
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-.-Debug-b5805d5c08fd3d92def4.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.10.0"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						2,
+						3,
+						4,
+						5,
+						6,
+						7
+					]
+				},
+				{
+					"abstractTargetIndexes" : 
+					[
+						0,
+						2,
+						3,
+						4,
+						5
+					],
+					"build" : "_deps/crow-build",
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-_deps.crow-build-Debug-4f398e5946de91fb39ff.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.15.0"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 1,
+					"source" : "build/_deps/crow-src",
+					"targetIndexes" : 
+					[
+						1,
+						8
+					]
+				}
+			],
+			"name" : "Debug",
+			"projects" : 
+			[
+				{
+					"abstractTargetIndexes" : 
+					[
+						1
+					],
+					"childIndexes" : 
+					[
+						1
+					],
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "CarRentalSystem",
+					"targetIndexes" : 
+					[
+						0,
+						2,
+						3,
+						4,
+						5,
+						6,
+						7
+					]
+				},
+				{
+					"abstractTargetIndexes" : 
+					[
+						0,
+						2,
+						3,
+						4,
+						5
+					],
+					"directoryIndexes" : 
+					[
+						1
+					],
+					"name" : "Crow",
+					"parentIndex" : 0,
+					"targetIndexes" : 
+					[
+						1,
+						8
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "ALL_BUILD::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-ALL_BUILD-Debug-55347fe4a5212f106c24.json",
+					"name" : "ALL_BUILD",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ALL_BUILD::@2c1e7a9ae0c1ce7a4691",
+					"jsonFile" : "target-ALL_BUILD-Debug-caca444c6f6233bb467c.json",
+					"name" : "ALL_BUILD",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "CarRentalSystem::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-CarRentalSystem-Debug-1cdfd8a71e8355238779.json",
+					"name" : "CarRentalSystem",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "Continuous::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-Continuous-Debug-e1a1e38db82c7dfac413.json",
+					"name" : "Continuous",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "Experimental::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-Experimental-Debug-80176836d7b6a4c676c4.json",
+					"name" : "Experimental",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "Nightly::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-Nightly-Debug-baa0138f63915227097e.json",
+					"name" : "Nightly",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "NightlyMemoryCheck::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-NightlyMemoryCheck-Debug-b493a7bd67ca58564e4c.json",
+					"name" : "NightlyMemoryCheck",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "ZERO_CHECK::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-ZERO_CHECK-Debug-0c108968278a258278b5.json",
+					"name" : "ZERO_CHECK",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "uninstall::@2c1e7a9ae0c1ce7a4691",
+					"jsonFile" : "target-uninstall-Debug-b54747a20504bd231388.json",
+					"name" : "uninstall",
+					"projectIndex" : 1
+				}
+			]
+		},
+		{
+			"abstractTargets" : 
+			[
+				{
+					"directoryIndex" : 1,
+					"id" : "Crow::@2c1e7a9ae0c1ce7a4691",
+					"jsonFile" : "target-Crow-Release-9819a9f06f4688b5c001.json",
+					"name" : "Crow",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "Git::Git::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-Git__Git-Release-deadef387777576da2c0.json",
+					"name" : "Git::Git",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "Python3::Interpreter::@2c1e7a9ae0c1ce7a4691",
+					"jsonFile" : "target-Python3__Interpreter-Release-b0134f95d8dd04d21c7c.json",
+					"name" : "Python3::Interpreter",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "Python3::InterpreterMultiConfig::@2c1e7a9ae0c1ce7a4691",
+					"jsonFile" : "target-Python3__InterpreterMultiConfig-Release-3e27d982863a3d137b72.json",
+					"name" : "Python3::InterpreterMultiConfig",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "Threads::Threads::@2c1e7a9ae0c1ce7a4691",
+					"jsonFile" : "target-Threads__Threads-Release-c83aa9907cf8aeced820.json",
+					"name" : "Threads::Threads",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "asio::asio::@2c1e7a9ae0c1ce7a4691",
+					"jsonFile" : "target-asio__asio-Release-96fbdac752618f1176e8.json",
+					"name" : "asio::asio",
+					"projectIndex" : 1
+				}
+			],
+			"directories" : 
+			[
+				{
+					"abstractTargetIndexes" : 
+					[
+						1
+					],
+					"build" : ".",
+					"childIndexes" : 
+					[
+						1
+					],
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-.-Release-b5805d5c08fd3d92def4.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.10.0"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						2,
+						3,
+						4,
+						5,
+						6,
+						7
+					]
+				},
+				{
+					"abstractTargetIndexes" : 
+					[
+						0,
+						2,
+						3,
+						4,
+						5
+					],
+					"build" : "_deps/crow-build",
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-_deps.crow-build-Release-4f398e5946de91fb39ff.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.15.0"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 1,
+					"source" : "build/_deps/crow-src",
+					"targetIndexes" : 
+					[
+						1,
+						8
+					]
+				}
+			],
+			"name" : "Release",
+			"projects" : 
+			[
+				{
+					"abstractTargetIndexes" : 
+					[
+						1
+					],
+					"childIndexes" : 
+					[
+						1
+					],
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "CarRentalSystem",
+					"targetIndexes" : 
+					[
+						0,
+						2,
+						3,
+						4,
+						5,
+						6,
+						7
+					]
+				},
+				{
+					"abstractTargetIndexes" : 
+					[
+						0,
+						2,
+						3,
+						4,
+						5
+					],
+					"directoryIndexes" : 
+					[
+						1
+					],
+					"name" : "Crow",
+					"parentIndex" : 0,
+					"targetIndexes" : 
+					[
+						1,
+						8
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "ALL_BUILD::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-ALL_BUILD-Release-55347fe4a5212f106c24.json",
+					"name" : "ALL_BUILD",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ALL_BUILD::@2c1e7a9ae0c1ce7a4691",
+					"jsonFile" : "target-ALL_BUILD-Release-caca444c6f6233bb467c.json",
+					"name" : "ALL_BUILD",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "CarRentalSystem::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-CarRentalSystem-Release-6f7fc20731c8aa788bfa.json",
+					"name" : "CarRentalSystem",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "Continuous::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-Continuous-Release-e1a1e38db82c7dfac413.json",
+					"name" : "Continuous",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "Experimental::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-Experimental-Release-80176836d7b6a4c676c4.json",
+					"name" : "Experimental",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "Nightly::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-Nightly-Release-baa0138f63915227097e.json",
+					"name" : "Nightly",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "NightlyMemoryCheck::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-NightlyMemoryCheck-Release-b493a7bd67ca58564e4c.json",
+					"name" : "NightlyMemoryCheck",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "ZERO_CHECK::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-ZERO_CHECK-Release-0c108968278a258278b5.json",
+					"name" : "ZERO_CHECK",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "uninstall::@2c1e7a9ae0c1ce7a4691",
+					"jsonFile" : "target-uninstall-Release-b54747a20504bd231388.json",
+					"name" : "uninstall",
+					"projectIndex" : 1
+				}
+			]
+		},
+		{
+			"abstractTargets" : 
+			[
+				{
+					"directoryIndex" : 1,
+					"id" : "Crow::@2c1e7a9ae0c1ce7a4691",
+					"jsonFile" : "target-Crow-MinSizeRel-9819a9f06f4688b5c001.json",
+					"name" : "Crow",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "Git::Git::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-Git__Git-MinSizeRel-deadef387777576da2c0.json",
+					"name" : "Git::Git",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "Python3::Interpreter::@2c1e7a9ae0c1ce7a4691",
+					"jsonFile" : "target-Python3__Interpreter-MinSizeRel-b0134f95d8dd04d21c7c.json",
+					"name" : "Python3::Interpreter",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "Python3::InterpreterMultiConfig::@2c1e7a9ae0c1ce7a4691",
+					"jsonFile" : "target-Python3__InterpreterMultiConfig-MinSizeRel-3e27d982863a3d137b72.json",
+					"name" : "Python3::InterpreterMultiConfig",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "Threads::Threads::@2c1e7a9ae0c1ce7a4691",
+					"jsonFile" : "target-Threads__Threads-MinSizeRel-c83aa9907cf8aeced820.json",
+					"name" : "Threads::Threads",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "asio::asio::@2c1e7a9ae0c1ce7a4691",
+					"jsonFile" : "target-asio__asio-MinSizeRel-96fbdac752618f1176e8.json",
+					"name" : "asio::asio",
+					"projectIndex" : 1
+				}
+			],
+			"directories" : 
+			[
+				{
+					"abstractTargetIndexes" : 
+					[
+						1
+					],
+					"build" : ".",
+					"childIndexes" : 
+					[
+						1
+					],
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-.-MinSizeRel-b5805d5c08fd3d92def4.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.10.0"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						2,
+						3,
+						4,
+						5,
+						6,
+						7
+					]
+				},
+				{
+					"abstractTargetIndexes" : 
+					[
+						0,
+						2,
+						3,
+						4,
+						5
+					],
+					"build" : "_deps/crow-build",
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-_deps.crow-build-MinSizeRel-4f398e5946de91fb39ff.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.15.0"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 1,
+					"source" : "build/_deps/crow-src",
+					"targetIndexes" : 
+					[
+						1,
+						8
+					]
+				}
+			],
+			"name" : "MinSizeRel",
+			"projects" : 
+			[
+				{
+					"abstractTargetIndexes" : 
+					[
+						1
+					],
+					"childIndexes" : 
+					[
+						1
+					],
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "CarRentalSystem",
+					"targetIndexes" : 
+					[
+						0,
+						2,
+						3,
+						4,
+						5,
+						6,
+						7
+					]
+				},
+				{
+					"abstractTargetIndexes" : 
+					[
+						0,
+						2,
+						3,
+						4,
+						5
+					],
+					"directoryIndexes" : 
+					[
+						1
+					],
+					"name" : "Crow",
+					"parentIndex" : 0,
+					"targetIndexes" : 
+					[
+						1,
+						8
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "ALL_BUILD::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-ALL_BUILD-MinSizeRel-55347fe4a5212f106c24.json",
+					"name" : "ALL_BUILD",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ALL_BUILD::@2c1e7a9ae0c1ce7a4691",
+					"jsonFile" : "target-ALL_BUILD-MinSizeRel-caca444c6f6233bb467c.json",
+					"name" : "ALL_BUILD",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "CarRentalSystem::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-CarRentalSystem-MinSizeRel-33f9355c6edcf802ff7f.json",
+					"name" : "CarRentalSystem",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "Continuous::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-Continuous-MinSizeRel-e1a1e38db82c7dfac413.json",
+					"name" : "Continuous",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "Experimental::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-Experimental-MinSizeRel-80176836d7b6a4c676c4.json",
+					"name" : "Experimental",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "Nightly::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-Nightly-MinSizeRel-baa0138f63915227097e.json",
+					"name" : "Nightly",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "NightlyMemoryCheck::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-NightlyMemoryCheck-MinSizeRel-b493a7bd67ca58564e4c.json",
+					"name" : "NightlyMemoryCheck",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "ZERO_CHECK::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-ZERO_CHECK-MinSizeRel-0c108968278a258278b5.json",
+					"name" : "ZERO_CHECK",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "uninstall::@2c1e7a9ae0c1ce7a4691",
+					"jsonFile" : "target-uninstall-MinSizeRel-b54747a20504bd231388.json",
+					"name" : "uninstall",
+					"projectIndex" : 1
+				}
+			]
+		},
+		{
+			"abstractTargets" : 
+			[
+				{
+					"directoryIndex" : 1,
+					"id" : "Crow::@2c1e7a9ae0c1ce7a4691",
+					"jsonFile" : "target-Crow-RelWithDebInfo-9819a9f06f4688b5c001.json",
+					"name" : "Crow",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "Git::Git::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-Git__Git-RelWithDebInfo-deadef387777576da2c0.json",
+					"name" : "Git::Git",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "Python3::Interpreter::@2c1e7a9ae0c1ce7a4691",
+					"jsonFile" : "target-Python3__Interpreter-RelWithDebInfo-b0134f95d8dd04d21c7c.json",
+					"name" : "Python3::Interpreter",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "Python3::InterpreterMultiConfig::@2c1e7a9ae0c1ce7a4691",
+					"jsonFile" : "target-Python3__InterpreterMultiConfig-RelWithDebInfo-3e27d982863a3d137b72.json",
+					"name" : "Python3::InterpreterMultiConfig",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "Threads::Threads::@2c1e7a9ae0c1ce7a4691",
+					"jsonFile" : "target-Threads__Threads-RelWithDebInfo-c83aa9907cf8aeced820.json",
+					"name" : "Threads::Threads",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "asio::asio::@2c1e7a9ae0c1ce7a4691",
+					"jsonFile" : "target-asio__asio-RelWithDebInfo-96fbdac752618f1176e8.json",
+					"name" : "asio::asio",
+					"projectIndex" : 1
+				}
+			],
+			"directories" : 
+			[
+				{
+					"abstractTargetIndexes" : 
+					[
+						1
+					],
+					"build" : ".",
+					"childIndexes" : 
+					[
+						1
+					],
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-.-RelWithDebInfo-b5805d5c08fd3d92def4.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.10.0"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						2,
+						3,
+						4,
+						5,
+						6,
+						7
+					]
+				},
+				{
+					"abstractTargetIndexes" : 
+					[
+						0,
+						2,
+						3,
+						4,
+						5
+					],
+					"build" : "_deps/crow-build",
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-_deps.crow-build-RelWithDebInfo-4f398e5946de91fb39ff.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.15.0"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 1,
+					"source" : "build/_deps/crow-src",
+					"targetIndexes" : 
+					[
+						1,
+						8
+					]
+				}
+			],
+			"name" : "RelWithDebInfo",
+			"projects" : 
+			[
+				{
+					"abstractTargetIndexes" : 
+					[
+						1
+					],
+					"childIndexes" : 
+					[
+						1
+					],
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "CarRentalSystem",
+					"targetIndexes" : 
+					[
+						0,
+						2,
+						3,
+						4,
+						5,
+						6,
+						7
+					]
+				},
+				{
+					"abstractTargetIndexes" : 
+					[
+						0,
+						2,
+						3,
+						4,
+						5
+					],
+					"directoryIndexes" : 
+					[
+						1
+					],
+					"name" : "Crow",
+					"parentIndex" : 0,
+					"targetIndexes" : 
+					[
+						1,
+						8
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "ALL_BUILD::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-ALL_BUILD-RelWithDebInfo-55347fe4a5212f106c24.json",
+					"name" : "ALL_BUILD",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ALL_BUILD::@2c1e7a9ae0c1ce7a4691",
+					"jsonFile" : "target-ALL_BUILD-RelWithDebInfo-caca444c6f6233bb467c.json",
+					"name" : "ALL_BUILD",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "CarRentalSystem::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-CarRentalSystem-RelWithDebInfo-34ae8f853f2680d1ae37.json",
+					"name" : "CarRentalSystem",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "Continuous::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-Continuous-RelWithDebInfo-e1a1e38db82c7dfac413.json",
+					"name" : "Continuous",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "Experimental::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-Experimental-RelWithDebInfo-80176836d7b6a4c676c4.json",
+					"name" : "Experimental",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "Nightly::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-Nightly-RelWithDebInfo-baa0138f63915227097e.json",
+					"name" : "Nightly",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "NightlyMemoryCheck::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-NightlyMemoryCheck-RelWithDebInfo-b493a7bd67ca58564e4c.json",
+					"name" : "NightlyMemoryCheck",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "ZERO_CHECK::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-ZERO_CHECK-RelWithDebInfo-0c108968278a258278b5.json",
+					"name" : "ZERO_CHECK",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "uninstall::@2c1e7a9ae0c1ce7a4691",
+					"jsonFile" : "target-uninstall-RelWithDebInfo-b54747a20504bd231388.json",
+					"name" : "uninstall",
+					"projectIndex" : 1
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "C:/Car Rental System -- OOP/OOP-Car-Rental-System/build",
+		"source" : "C:/Car Rental System -- OOP/OOP-Car-Rental-System"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 11
+	}
+}

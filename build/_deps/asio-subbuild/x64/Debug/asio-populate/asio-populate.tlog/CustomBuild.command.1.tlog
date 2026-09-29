@@ -1,0 +1,150 @@
+^C:\CAR RENTAL SYSTEM -- OOP\OOP-CAR-RENTAL-SYSTEM\BUILD\_DEPS\ASIO-SUBBUILD\CMAKEFILES\1F0B4F2A84FD74297C9AD85B70EAC4CD\ASIO-POPULATE-MKDIR.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -Dcfgdir=/Debug -P "C:/Car Rental System -- OOP/OOP-Car-Rental-System/build/_deps/asio-subbuild/asio-populate-prefix/tmp/asio-populate-mkdirs.cmake"
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch "C:/Car Rental System -- OOP/OOP-Car-Rental-System/build/_deps/asio-subbuild/asio-populate-prefix/src/asio-populate-stamp/Debug/asio-populate-mkdir"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\CAR RENTAL SYSTEM -- OOP\OOP-CAR-RENTAL-SYSTEM\BUILD\_DEPS\ASIO-SUBBUILD\CMAKEFILES\1F0B4F2A84FD74297C9AD85B70EAC4CD\ASIO-POPULATE-DOWNLOAD.RULE
+setlocal
+cd "C:\Car Rental System -- OOP\OOP-Car-Rental-System\build\_deps"
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -DCMAKE_MESSAGE_LOG_LEVEL=VERBOSE -P "C:/Car Rental System -- OOP/OOP-Car-Rental-System/build/_deps/asio-subbuild/asio-populate-prefix/tmp/asio-populate-gitclone.cmake"
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch "C:/Car Rental System -- OOP/OOP-Car-Rental-System/build/_deps/asio-subbuild/asio-populate-prefix/src/asio-populate-stamp/Debug/asio-populate-download"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\CAR RENTAL SYSTEM -- OOP\OOP-CAR-RENTAL-SYSTEM\BUILD\_DEPS\ASIO-SUBBUILD\CMAKEFILES\1F0B4F2A84FD74297C9AD85B70EAC4CD\ASIO-POPULATE-UPDATE.RULE
+setlocal
+cd "C:\Car Rental System -- OOP\OOP-Car-Rental-System\build\_deps\asio-src"
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -Dcan_fetch=YES -DCMAKE_MESSAGE_LOG_LEVEL=VERBOSE -P "C:/Car Rental System -- OOP/OOP-Car-Rental-System/build/_deps/asio-subbuild/asio-populate-prefix/tmp/asio-populate-gitupdate.cmake"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\CAR RENTAL SYSTEM -- OOP\OOP-CAR-RENTAL-SYSTEM\BUILD\_DEPS\ASIO-SUBBUILD\CMAKEFILES\1F0B4F2A84FD74297C9AD85B70EAC4CD\ASIO-POPULATE-PATCH.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch "C:/Car Rental System -- OOP/OOP-Car-Rental-System/build/_deps/asio-subbuild/asio-populate-prefix/src/asio-populate-stamp/Debug/asio-populate-patch"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\CAR RENTAL SYSTEM -- OOP\OOP-CAR-RENTAL-SYSTEM\BUILD\_DEPS\ASIO-SUBBUILD\CMAKEFILES\1F0B4F2A84FD74297C9AD85B70EAC4CD\ASIO-POPULATE-CONFIGURE.RULE
+setlocal
+cd "C:\Car Rental System -- OOP\OOP-Car-Rental-System\build\_deps\asio-build"
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch "C:/Car Rental System -- OOP/OOP-Car-Rental-System/build/_deps/asio-subbuild/asio-populate-prefix/src/asio-populate-stamp/Debug/asio-populate-configure"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\CAR RENTAL SYSTEM -- OOP\OOP-CAR-RENTAL-SYSTEM\BUILD\_DEPS\ASIO-SUBBUILD\CMAKEFILES\1F0B4F2A84FD74297C9AD85B70EAC4CD\ASIO-POPULATE-BUILD.RULE
+setlocal
+cd "C:\Car Rental System -- OOP\OOP-Car-Rental-System\build\_deps\asio-build"
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch "C:/Car Rental System -- OOP/OOP-Car-Rental-System/build/_deps/asio-subbuild/asio-populate-prefix/src/asio-populate-stamp/Debug/asio-populate-build"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\CAR RENTAL SYSTEM -- OOP\OOP-CAR-RENTAL-SYSTEM\BUILD\_DEPS\ASIO-SUBBUILD\CMAKEFILES\1F0B4F2A84FD74297C9AD85B70EAC4CD\ASIO-POPULATE-INSTALL.RULE
+setlocal
+cd "C:\Car Rental System -- OOP\OOP-Car-Rental-System\build\_deps\asio-build"
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch "C:/Car Rental System -- OOP/OOP-Car-Rental-System/build/_deps/asio-subbuild/asio-populate-prefix/src/asio-populate-stamp/Debug/asio-populate-install"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\CAR RENTAL SYSTEM -- OOP\OOP-CAR-RENTAL-SYSTEM\BUILD\_DEPS\ASIO-SUBBUILD\CMAKEFILES\1F0B4F2A84FD74297C9AD85B70EAC4CD\ASIO-POPULATE-TEST.RULE
+setlocal
+cd "C:\Car Rental System -- OOP\OOP-Car-Rental-System\build\_deps\asio-build"
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch "C:/Car Rental System -- OOP/OOP-Car-Rental-System/build/_deps/asio-subbuild/asio-populate-prefix/src/asio-populate-stamp/Debug/asio-populate-test"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\CAR RENTAL SYSTEM -- OOP\OOP-CAR-RENTAL-SYSTEM\BUILD\_DEPS\ASIO-SUBBUILD\CMAKEFILES\C51738E6993DD0A76BC037F37EFA4A91\ASIO-POPULATE-COMPLETE.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E make_directory "C:/Car Rental System -- OOP/OOP-Car-Rental-System/build/_deps/asio-subbuild/CMakeFiles/Debug"
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch "C:/Car Rental System -- OOP/OOP-Car-Rental-System/build/_deps/asio-subbuild/CMakeFiles/Debug/asio-populate-complete"
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch "C:/Car Rental System -- OOP/OOP-Car-Rental-System/build/_deps/asio-subbuild/asio-populate-prefix/src/asio-populate-stamp/Debug/asio-populate-done"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\CAR RENTAL SYSTEM -- OOP\OOP-CAR-RENTAL-SYSTEM\BUILD\_DEPS\ASIO-SUBBUILD\CMAKEFILES\33A166F73DE0E2F3493017CFC4B2C592\ASIO-POPULATE.RULE
+setlocal
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\CAR RENTAL SYSTEM -- OOP\OOP-CAR-RENTAL-SYSTEM\BUILD\_DEPS\ASIO-SUBBUILD\CMAKELISTS.TXT
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" "-SC:/Car Rental System -- OOP/OOP-Car-Rental-System/build/_deps/asio-subbuild" "-BC:/Car Rental System -- OOP/OOP-Car-Rental-System/build/_deps/asio-subbuild" --check-stamp-file "C:/Car Rental System -- OOP/OOP-Car-Rental-System/build/_deps/asio-subbuild/CMakeFiles/generate.stamp"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

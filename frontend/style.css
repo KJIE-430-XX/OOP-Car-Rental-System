@@ -1,0 +1,11 @@
+body {
+  font-family: sans-serif;
+  max-width: 300px;
+  margin: 60px auto;
+}
+input {
+  display: block;
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 8px;
+}
