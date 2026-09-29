@@ -1,8 +1,0 @@
-{
-	"InstallScripts" : 
-	[
-		"C:/Car Rental System -- OOP/OOP-Car-Rental-System/build/cmake_install.cmake",
-		"C:/Car Rental System -- OOP/OOP-Car-Rental-System/build/_deps/crow-build/cmake_install.cmake"
-	],
-	"Parallel" : false
-}
