@@ -7975,3 +7975,70 @@ events:
         - "C:/Program Files/CMake"
         - "C:/Program Files (x86)/CarRentalSystem"
 ...
+
+---
+events:
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.4/Modules/FindPython/Support.cmake:2631 (find_program)"
+      - "C:/Program Files/CMake/share/cmake-4.4/Modules/FindPython3.cmake:699 (include)"
+      - "build/_deps/crow-src/CMakeLists.txt:40 (find_package)"
+    mode: "program"
+    variable: "_Python3_EXECUTABLE_DEBUG"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "python3.14_d"
+      - "python3_d"
+      - "python_d"
+    candidate_directories:
+      - "C:/Users/User/AppData/Local/Python/pythoncore-3.14-64/"
+    searched_directories:
+      - "C:/Users/User/AppData/Local/Python/pythoncore-3.14-64/python3.14_d.com"
+      - "C:/Users/User/AppData/Local/Python/pythoncore-3.14-64/python3.14_d.exe"
+      - "C:/Users/User/AppData/Local/Python/pythoncore-3.14-64/python3.14_d"
+      - "C:/Users/User/AppData/Local/Python/pythoncore-3.14-64/python3_d.com"
+      - "C:/Users/User/AppData/Local/Python/pythoncore-3.14-64/python3_d.exe"
+      - "C:/Users/User/AppData/Local/Python/pythoncore-3.14-64/python3_d"
+      - "C:/Users/User/AppData/Local/Python/pythoncore-3.14-64/python_d.com"
+      - "C:/Users/User/AppData/Local/Python/pythoncore-3.14-64/python_d.exe"
+      - "C:/Users/User/AppData/Local/Python/pythoncore-3.14-64/python_d"
+    found: false
+    search_context:
+      ENV{PATH}:
+        - "C:\\Windows\\system32"
+        - "C:\\Windows"
+        - "C:\\Windows\\System32\\Wbem"
+        - "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\Windows\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA app\\NvDLISR"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\ngrok"
+        - "C:\\Program Files\\nodejs\\"
+        - "C:\\Program Files\\dotnet\\"
+        - "C:\\Program Files\\swipl\\bin"
+        - "C:\\Program Files\\CMake\\bin"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\"
+        - "C:\\Users\\User\\AppData\\Local\\Programs\\Python\\Python311\\Scripts\\"
+        - "C:\\Users\\User\\AppData\\Local\\Programs\\Python\\Python311\\"
+        - "C:\\Users\\User\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "C:\\Users\\User\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
+        - "C:\\Users\\User\\AppData\\Local\\Python\\bin"
+        - "C:\\Users\\User\\AppData\\Roaming\\npm"
+        - "C:\\Users\\User\\AppData\\Local\\Programs\\Antigravity IDE\\bin"
+        - "C:\\Users\\User\\AppData\\Local\\Kingsoft\\WPS Office\\12.1.0.27458\\clitool"
+      CMAKE_INSTALL_PREFIX: "C:/Program Files (x86)/CarRentalSystem"
+      CMAKE_SYSTEM_PREFIX_PATH:
+        - "C:/Program Files"
+        - "C:/Program Files (x86)"
+        - "C:/Program Files/CMake"
+        - "C:/Program Files (x86)/CarRentalSystem"
+...
