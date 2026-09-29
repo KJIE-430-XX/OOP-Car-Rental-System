@@ -1,3 +1,12 @@
+/*
+Command for build and test project locally
+
+cmake --build build
+.\build\Debug\CarRentalSystem.exe
+
+link: http://localhost:18080/
+*/
+
 #include "crow.h"
 #include <fstream>
 #include <sstream>
