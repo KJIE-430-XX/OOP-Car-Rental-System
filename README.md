@@ -15,3 +15,7 @@ The project is built using the following technologies:
 - **CSS** - Styling and layout
 - **JavaScript** - Client-side interactivity
 - **C++** - Server-side logic and backend
+
+### Repository
+
+- **GitHub**: [https://github.com/KJIE-430-XX/OOP-Car-Rental-System.git]

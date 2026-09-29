@@ -1,0 +1,10 @@
+^C:\CAR RENTAL SYSTEM -- OOP\OOP-CAR-RENTAL-SYSTEM\BUILD\_DEPS\CROW-SUBBUILD\CMAKELISTS.TXT
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" "-SC:/Car Rental System -- OOP/OOP-Car-Rental-System/build/_deps/crow-subbuild" "-BC:/Car Rental System -- OOP/OOP-Car-Rental-System/build/_deps/crow-subbuild" --check-stamp-file "C:/Car Rental System -- OOP/OOP-Car-Rental-System/build/_deps/crow-subbuild/CMakeFiles/generate.stamp"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
