@@ -8,6 +8,7 @@ link: http://localhost:18080/
 */
 
 #include "crow.h"
+#include "Database.h"
 #include <fstream>
 #include <sstream>
 
@@ -19,6 +20,8 @@ std::string readFile(const std::string& path) {
 }
 
 int main() {
+    initializeDatabase("car_rental.db");
+
     crow::SimpleApp app;
 
     CROW_ROUTE(app, "/")([]() {

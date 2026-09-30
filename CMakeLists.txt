@@ -21,10 +21,22 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(Crow)
 
-add_executable(CarRentalSystem main.cpp)
+# SQLite database (C++ wrapper)
+set(SQLITECPP_RUN_CPPLINT OFF CACHE BOOL "" FORCE)
+set(SQLITECPP_RUN_CPPCHECK OFF CACHE BOOL "" FORCE)
+set(SQLITECPP_INTERNAL_SQLITE ON CACHE BOOL "" FORCE)  # bundles sqlite3 itself, no system install needed
+
+FetchContent_Declare(
+    SQLiteCpp
+    GIT_REPOSITORY https://github.com/SRombauts/SQLiteCpp.git
+    GIT_TAG        3.3.1
+)
+FetchContent_MakeAvailable(SQLiteCpp)
+
+add_executable(CarRentalSystem main.cpp Database.cpp)
 
 # Link to the Crow Library
-target_link_libraries(CarRentalSystem PRIVATE Crow::Crow)
+target_link_libraries(CarRentalSystem PRIVATE Crow::Crow SQLiteCpp)
 
 include(CTest)
 enable_testing()
@@ -32,3 +44,4 @@ enable_testing()
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
 include(CPack)
+
