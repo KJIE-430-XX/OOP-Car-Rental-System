@@ -1,0 +1,105 @@
+
+---
+events:
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/usr/share/cmake-4.2/Modules/CMakeDetermineSystem.cmake:12 (find_program)"
+      - "CMakeLists.txt:16 (project)"
+    mode: "program"
+    variable: "CMAKE_UNAME"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "uname"
+    candidate_directories:
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/usr/bin/"
+      - "/sbin/"
+      - "/bin/"
+      - "/usr/games/"
+      - "/usr/local/games/"
+      - "/usr/lib/wsl/lib/"
+      - "/mnt/c/Users/User/AppData/Roaming/Code/User/globalStorage/github.copilot-chat/debugCommand/"
+      - "/mnt/c/Users/User/AppData/Roaming/Code/User/globalStorage/github.copilot-chat/copilotCli/"
+      - "/mnt/c/Windows/system32/"
+      - "/mnt/c/Windows/"
+      - "/mnt/c/Windows/System32/Wbem/"
+      - "/mnt/c/Windows/System32/WindowsPowerShell/v1.0/"
+      - "/mnt/c/Windows/System32/OpenSSH/"
+      - "/mnt/c/Program Files/NVIDIA Corporation/NVIDIA app/NvDLISR/"
+      - "/mnt/c/Program Files/Git/cmd/"
+      - "/mnt/c/ngrok/"
+      - "/mnt/c/Program Files/nodejs/"
+      - "/mnt/c/Program Files/dotnet/"
+      - "/mnt/c/Program Files/swipl/bin/"
+      - "/mnt/c/Program Files/CMake/bin/"
+      - "/mnt/c/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/"
+      - "/mnt/c/Users/User/AppData/Local/Programs/Python/Python311/Scripts/"
+      - "/mnt/c/Users/User/AppData/Local/Programs/Python/Python311/"
+      - "/mnt/c/Users/User/AppData/Local/Microsoft/WindowsApps/"
+      - "/mnt/c/Users/User/AppData/Local/Programs/Microsoft VS Code/bin/"
+      - "/mnt/c/Users/User/AppData/Local/Python/bin/"
+      - "/mnt/c/Users/User/AppData/Roaming/npm/"
+      - "/mnt/c/Users/User/AppData/Local/Programs/Antigravity IDE/bin/"
+      - "/mnt/c/Users/User/AppData/Local/Kingsoft/WPS Office/12.1.0.27458/clitool/"
+      - "/mnt/c/Users/User/AppData/Local/Programs/DockerDesktop/resources/bin/"
+      - "/snap/bin/"
+    searched_directories:
+      - "/usr/local/sbin/uname"
+      - "/usr/local/bin/uname"
+      - "/usr/sbin/uname"
+    found: "/usr/bin/uname"
+    search_context:
+      ENV{PATH}:
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/usr/lib/wsl/lib"
+        - "/mnt/c/Users/User/AppData/Roaming/Code/User/globalStorage/github.copilot-chat/debugCommand"
+        - "/mnt/c/Users/User/AppData/Roaming/Code/User/globalStorage/github.copilot-chat/copilotCli"
+        - "/mnt/c/Windows/system32"
+        - "/mnt/c/Windows"
+        - "/mnt/c/Windows/System32/Wbem"
+        - "/mnt/c/Windows/System32/WindowsPowerShell/v1.0/"
+        - "/mnt/c/Windows/System32/OpenSSH/"
+        - "/mnt/c/Program Files/NVIDIA Corporation/NVIDIA app/NvDLISR"
+        - "/mnt/c/Program Files/Git/cmd"
+        - "/mnt/c/ngrok"
+        - "/mnt/c/Program Files/nodejs/"
+        - "/mnt/c/Program Files/dotnet/"
+        - "/mnt/c/Program Files/swipl/bin"
+        - "/mnt/c/Program Files/CMake/bin"
+        - "/mnt/c/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/"
+        - "/mnt/c/Users/User/AppData/Local/Programs/Python/Python311/Scripts/"
+        - "/mnt/c/Users/User/AppData/Local/Programs/Python/Python311/"
+        - "/mnt/c/Users/User/AppData/Local/Microsoft/WindowsApps"
+        - "/mnt/c/Users/User/AppData/Local/Programs/Microsoft VS Code/bin"
+        - "/mnt/c/Users/User/AppData/Local/Python/bin"
+        - "/mnt/c/Users/User/AppData/Roaming/npm"
+        - "/mnt/c/Users/User/AppData/Local/Programs/Antigravity IDE/bin"
+        - "/mnt/c/Users/User/AppData/Local/Kingsoft/WPS Office/12.1.0.27458/clitool"
+        - "/mnt/c/Users/User/AppData/Local/Programs/DockerDesktop/resources/bin"
+        - "/snap/bin"
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-4.2/Modules/CMakeDetermineSystem.cmake:212 (message)"
+      - "CMakeLists.txt:16 (project)"
+    message: |
+      The system is: Linux - 6.6.114.1-microsoft-standard-WSL2 - x86_64
+...

@@ -1,0 +1,10 @@
+{
+	"InstallScripts" : 
+	[
+		"/mnt/c/Car Rental System -- OOP/OOP-Car-Rental-System/build-linux/cmake_install.cmake",
+		"/mnt/c/Car Rental System -- OOP/OOP-Car-Rental-System/build-linux/_deps/crow-build/cmake_install.cmake",
+		"/mnt/c/Car Rental System -- OOP/OOP-Car-Rental-System/build-linux/_deps/sqlitecpp-build/cmake_install.cmake",
+		"/mnt/c/Car Rental System -- OOP/OOP-Car-Rental-System/build-linux/_deps/sqlitecpp-build/sqlite3/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

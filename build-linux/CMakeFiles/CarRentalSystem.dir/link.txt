@@ -1,0 +1,1 @@
+/usr/bin/c++ -g -Wl,--dependency-file=CMakeFiles/CarRentalSystem.dir/link.d CMakeFiles/CarRentalSystem.dir/main.cpp.o CMakeFiles/CarRentalSystem.dir/Database.cpp.o -o CarRentalSystem  _deps/sqlitecpp-build/libSQLiteCpp.a _deps/sqlitecpp-build/sqlite3/libsqlite3.a -ldl

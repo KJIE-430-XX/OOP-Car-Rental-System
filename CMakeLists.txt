@@ -33,6 +33,10 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(SQLiteCpp)
 
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(SQLiteCpp PUBLIC -include cstdint)
+endif()
+
 add_executable(CarRentalSystem main.cpp Database.cpp)
 
 # Link to the Crow Library

@@ -1,0 +1,3 @@
+/mnt/c/Car Rental System -- OOP/OOP-Car-Rental-System/build-linux/_deps/sqlitecpp-subbuild/CMakeFiles/sqlitecpp-populate.dir
+/mnt/c/Car Rental System -- OOP/OOP-Car-Rental-System/build-linux/_deps/sqlitecpp-subbuild/CMakeFiles/edit_cache.dir
+/mnt/c/Car Rental System -- OOP/OOP-Car-Rental-System/build-linux/_deps/sqlitecpp-subbuild/CMakeFiles/rebuild_cache.dir
