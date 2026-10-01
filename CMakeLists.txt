@@ -37,7 +37,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(SQLiteCpp PUBLIC -include cstdint)
 endif()
 
-add_executable(CarRentalSystem main.cpp Database.cpp)
+add_executable(CarRentalSystem main.cpp Database.cpp Authentication.cpp)
 
 # Link to the Crow Library
 target_link_libraries(CarRentalSystem PRIVATE Crow::Crow SQLiteCpp)

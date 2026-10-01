@@ -1,5 +1,7 @@
 file(REMOVE_RECURSE
   "CMakeFiles/CarRentalSystem.dir/link.d"
+  "CMakeFiles/CarRentalSystem.dir/Authentication.cpp.o"
+  "CMakeFiles/CarRentalSystem.dir/Authentication.cpp.o.d"
   "CMakeFiles/CarRentalSystem.dir/Database.cpp.o"
   "CMakeFiles/CarRentalSystem.dir/Database.cpp.o.d"
   "CMakeFiles/CarRentalSystem.dir/main.cpp.o"

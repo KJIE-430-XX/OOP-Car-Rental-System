@@ -4,6 +4,7 @@ CarRentalSystem: \
   /usr/lib/gcc/x86_64-linux-gnu/15/crtbeginS.o \
   CMakeFiles/CarRentalSystem.dir/main.cpp.o \
   CMakeFiles/CarRentalSystem.dir/Database.cpp.o \
+  CMakeFiles/CarRentalSystem.dir/Authentication.cpp.o \
   _deps/sqlitecpp-build/libSQLiteCpp.a \
   _deps/sqlitecpp-build/sqlite3/libsqlite3.a \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/libdl.a \
@@ -45,6 +46,8 @@ CarRentalSystem: \
 CMakeFiles/CarRentalSystem.dir/main.cpp.o:
 
 CMakeFiles/CarRentalSystem.dir/Database.cpp.o:
+
+CMakeFiles/CarRentalSystem.dir/Authentication.cpp.o:
 
 _deps/sqlitecpp-build/libSQLiteCpp.a:
 

@@ -12,16 +12,19 @@ link: http://localhost:18080/
 */
 
 #include "crow.h"
+#include "Authentication.h"
 #include "Database.h"
 #include <fstream>
 #include <sstream>
 
+using namespace std;
+
 namespace {
-const std::string databasePath = "car_rental.db";
+const string databasePath = "car_rental.db";
 
 bool hasStringFields(
     const crow::json::rvalue& body,
-    const std::initializer_list<const char*>& fields
+    const initializer_list<const char*>& fields
 ) {
     for (const char* field : fields) {
         if (!body[field] || body[field].t() != crow::json::type::String) {
@@ -32,9 +35,9 @@ bool hasStringFields(
 }
 }
 
-std::string readFile(const std::string& path) {
-    std::ifstream file(path);
-    std::stringstream buffer;
+string readFile(const string& path) {
+    ifstream file(path);
+    stringstream buffer;
     buffer << file.rdbuf();
     return buffer.str();
 }
@@ -43,13 +46,17 @@ int main() {
     try {
         initializeDatabase(databasePath);
     }
-    catch (const std::exception& e) {
-        std::cerr << "Database init failed: " << e.what() << std::endl;
+    catch (const exception& e) {
+        cerr << "Database init failed: " << e.what() << endl;
         return 1;
     }
 
     crow::SimpleApp app;
 
+    //Call constructor in Authentication.cpp
+    AuthenticationService authenticationService(databasePath);
+
+    // Define Crow route for the website's root URL
     CROW_ROUTE(app, "/")([]() {
         crow::response res(readFile("frontend/login.html"));
         res.set_header("Content-Type", "text/html");
@@ -87,15 +94,17 @@ int main() {
     });
 
     CROW_ROUTE(app, "/api/login").methods(crow::HTTPMethod::POST)
-    ([](const crow::request& req) {
+    ([&authenticationService](const crow::request& req) {
         auto body = crow::json::load(req.body);
         if (!body || !hasStringFields(body, {"username", "password"})) {
             return crow::response(400, R"({"message":"Username and password are required."})");
         }
 
-        std::string username = body["username"].s();
-        std::string password = body["password"].s();
-        LoginResult result = authenticateUser(databasePath, username, password);
+        string username = body["username"].s();
+        string password = body["password"].s();
+
+        //Call the Authentication.cpp 
+        LoginResult result = authenticationService.login(username, password);
 
         crow::json::wvalue responseBody;
         responseBody["message"] = result.message;
@@ -106,14 +115,13 @@ int main() {
     });
 
     CROW_ROUTE(app, "/api/register").methods(crow::HTTPMethod::POST)
-    ([](const crow::request& req) {
+    ([&authenticationService](const crow::request& req) {
         auto body = crow::json::load(req.body);
         if (!body || !hasStringFields(body, {"username", "password", "name", "phone_number"})) {
             return crow::response(400, R"({"message":"All fields are required."})");
         }
 
-        CustomerRegistrationResult result = registerCustomer(
-            databasePath,
+        CustomerRegistrationResult result = authenticationService.registerAccount(
             body["username"].s(),
             body["password"].s(),
             body["name"].s(),

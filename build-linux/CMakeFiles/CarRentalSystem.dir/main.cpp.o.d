@@ -904,4 +904,5 @@ CMakeFiles/CarRentalSystem.dir/main.cpp.o: \
  /mnt/c/Car\ Rental\ System\ --\ OOP/OOP-Car-Rental-System/build-linux/_deps/crow-src/include/crow/version.h \
  /mnt/c/Car\ Rental\ System\ --\ OOP/OOP-Car-Rental-System/build-linux/_deps/crow-src/include/crow/app.h \
  /usr/include/c++/15/thread /usr/include/c++/15/bits/this_thread_sleep.h \
+ /mnt/c/Car\ Rental\ System\ --\ OOP/OOP-Car-Rental-System/Authentication.h \
  /mnt/c/Car\ Rental\ System\ --\ OOP/OOP-Car-Rental-System/Database.h

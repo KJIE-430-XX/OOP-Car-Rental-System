@@ -607,6 +607,30 @@ sqlite3/fast:
 	$(MAKE) $(MAKESILENT) -f _deps/sqlitecpp-build/sqlite3/CMakeFiles/sqlite3.dir/build.make _deps/sqlitecpp-build/sqlite3/CMakeFiles/sqlite3.dir/build
 .PHONY : sqlite3/fast
 
+Authentication.o: Authentication.cpp.o
+.PHONY : Authentication.o
+
+# target to build an object file
+Authentication.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CarRentalSystem.dir/build.make CMakeFiles/CarRentalSystem.dir/Authentication.cpp.o
+.PHONY : Authentication.cpp.o
+
+Authentication.i: Authentication.cpp.i
+.PHONY : Authentication.i
+
+# target to preprocess a source file
+Authentication.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CarRentalSystem.dir/build.make CMakeFiles/CarRentalSystem.dir/Authentication.cpp.i
+.PHONY : Authentication.cpp.i
+
+Authentication.s: Authentication.cpp.s
+.PHONY : Authentication.s
+
+# target to generate assembly for a file
+Authentication.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CarRentalSystem.dir/build.make CMakeFiles/CarRentalSystem.dir/Authentication.cpp.s
+.PHONY : Authentication.cpp.s
+
 Database.o: Database.cpp.o
 .PHONY : Database.o
 
@@ -702,6 +726,9 @@ help:
 	@echo "... CarRentalSystem"
 	@echo "... SQLiteCpp"
 	@echo "... sqlite3"
+	@echo "... Authentication.o"
+	@echo "... Authentication.i"
+	@echo "... Authentication.s"
 	@echo "... Database.o"
 	@echo "... Database.i"
 	@echo "... Database.s"

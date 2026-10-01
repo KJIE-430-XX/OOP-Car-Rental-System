@@ -2,8 +2,10 @@
 
 #include <SQLiteCpp/SQLiteCpp.h>
 
+using namespace std;
+
 namespace {
-SQLite::Database openDatabase(const std::string& databasePath) {
+SQLite::Database openDatabase(const string& databasePath) {
     return SQLite::Database(
         databasePath,
         SQLite::OPEN_READWRITE | SQLite::OPEN_CREATE
@@ -11,7 +13,7 @@ SQLite::Database openDatabase(const std::string& databasePath) {
 }
 }
 
-void initializeDatabase(const std::string& databasePath) {
+void initializeDatabase(const string& databasePath) {
     SQLite::Database database = openDatabase(databasePath);
 
     database.exec("PRAGMA foreign_keys = ON;");
@@ -75,89 +77,3 @@ void initializeDatabase(const std::string& databasePath) {
     )sql");
 }
 
-CustomerRegistrationResult registerCustomer(
-    const std::string& databasePath,
-    const std::string& username,
-    const std::string& password,
-    const std::string& name,
-    const std::string& phoneNumber
-) {
-    if (username.empty() || password.empty() || name.empty() || phoneNumber.empty()) {
-        return {false, 0, "All fields are required."};
-    }
-
-    try {
-        SQLite::Database database = openDatabase(databasePath);
-        SQLite::Statement statement(
-            database,
-            "INSERT INTO Customers "
-            "(username, password, name, phone_number, active_transactions) "
-            "VALUES (?, ?, ?, ?, ?)"
-        );
-        statement.bind(1, username);
-        statement.bind(2, password);
-        statement.bind(3, name);
-        statement.bind(4, phoneNumber);
-        statement.bind(5, "");
-        statement.exec();
-
-        return {
-            true,
-            static_cast<int>(database.getLastInsertRowid()),
-            "Registration successful. You can now log in."
-        };
-    } catch (const SQLite::Exception& exception) {
-        if (std::string(exception.what()).find("UNIQUE constraint failed") != std::string::npos) {
-            return {false, 0, "That username is already registered."};
-        }
-        return {false, 0, "Unable to register the account."};
-    }
-}
-
-LoginResult authenticateUser(
-    const std::string& databasePath,
-    const std::string& username,
-    const std::string& password
-) {
-    try {
-        SQLite::Database database = openDatabase(databasePath);
-
-        SQLite::Statement administratorQuery(
-            database,
-            "SELECT admin_id, role FROM Administrators "
-            "WHERE username = ? AND password = ?"
-        );
-        administratorQuery.bind(1, username);
-        administratorQuery.bind(2, password);
-        if (administratorQuery.executeStep()) {
-            return {
-                true,
-                true,
-                administratorQuery.getColumn(0).getInt(),
-                "Administrator",
-                "Administrator login successful."
-            };
-        }
-
-        SQLite::Statement customerQuery(
-            database,
-            "SELECT customer_id, name FROM Customers "
-            "WHERE username = ? AND password = ?"
-        );
-        customerQuery.bind(1, username);
-        customerQuery.bind(2, password);
-        if (customerQuery.executeStep()) {
-            return {
-                true,
-                false,
-                customerQuery.getColumn(0).getInt(),
-                customerQuery.getColumn(1).getString(),
-                "Login successful."
-            };
-        }
-    } catch (const SQLite::Exception&) {
-        return {false, false, 0, "", "Unable to access the database."};
-    }
-
-    return {false, false, 0, "", "Invalid username or password."};
-}
