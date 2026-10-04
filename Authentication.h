@@ -64,9 +64,13 @@ private:
     string databasePath;
 };
 
-// Single entry point connect with main.cpp
+// Single entry point connect with main.cpp and contact with Authentication.cpp
 class AuthenticationService {
 public:
+
+    // 'explicit' prevents accidental implicit conversion from string.
+    // Avoid: AuthenticationService authenticationService = databasePath;
+    // Only Allow: AuthenticationService authenticationService(databasePath);
     explicit AuthenticationService(const string& databasePath);
 
     // Inserts a new customer into the Customers table.

@@ -7,6 +7,7 @@ using namespace std;
 namespace {
 SQLite::Database openDatabase(const string& databasePath) {
     return SQLite::Database(
+
         databasePath,
         SQLite::OPEN_READWRITE | SQLite::OPEN_CREATE
     );
@@ -82,6 +83,7 @@ LoginResult AdministratorAuthenticationProvider::login(
 }
 
 // Create authentication providers for customer and administrator
+// Inheritance: AuthenticationProvider (base class) -> AdministratorAuthenticationProvider || CustomerAuthenticationProvider
 AuthenticationService::AuthenticationService(const string& databasePath)
     : databasePath(databasePath) {
     providers.push_back(
@@ -136,6 +138,7 @@ LoginResult AuthenticationService::login(
 ) const {
 
     // Run two provider, AdministratorAuthenticationProvider first, then CustomerAuthenticationProvider
+    // Polymorphism: same login function, but different provider serves different login types (admin/customer)
     for (const auto& provider : providers) {
         LoginResult result = provider->login(username, password);
         if (result.success || result.message == "Unable to access the database.") {

@@ -104,6 +104,8 @@ int main() {
         string password = body["password"].s();
 
         //Call the Authentication.cpp 
+        // Encapsulation: login logic is contained inside AuthenticationService  (Authentication.cpp).
+        // Abstraction: main.cpp only needs to call login()
         LoginResult result = authenticationService.login(username, password);
 
         crow::json::wvalue responseBody;
@@ -121,6 +123,8 @@ int main() {
             return crow::response(400, R"({"message":"All fields are required."})");
         }
 
+        // Encapsulation: login logic is contained inside AuthenticationService  (Authentication.cpp).
+        // Abstraction: main.cpp only needs to call login()
         CustomerRegistrationResult result = authenticationService.registerAccount(
             body["username"].s(),
             body["password"].s(),
