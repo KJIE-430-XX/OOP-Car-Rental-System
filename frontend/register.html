@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create account | Car Rental System</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body class="auth-page">
+  <main class="auth-shell">
+    <section class="auth-panel">
+      <a class="back-link" href="/">&#8592; Car Rental System</a>
+      <div class="auth-header">
+        <p class="eyebrow">GET STARTED</p>
+        <h1>Create account</h1>
+        <p>Register to manage your car rentals.</p>
+      </div>
+
+      <form id="register-form" onsubmit="register(event)">
+        <label for="register-username">Username</label>
+        <input id="register-username" autocomplete="username" maxlength="30" placeholder="Choose a username" required>
+        <label for="register-password">Password</label>
+        <input id="register-password" type="password" autocomplete="new-password" maxlength="30" placeholder="Choose a password" required>
+        <label for="register-name">Full name</label>
+        <input id="register-name" autocomplete="name" maxlength="50" placeholder="Your full name" required>
+        <label for="register-phone">Phone number</label>
+        <input id="register-phone" type="tel" autocomplete="tel" maxlength="20" placeholder="Your phone number" required>
+        <button class="submit-button" type="submit">Create account <span aria-hidden="true">&#8594;</span></button>
+      </form>
+
+      <p id="result" class="result" role="status"></p>
+      <p class="form-footer">Already have an account? <a href="/login.html">Sign in</a></p>
+    </section>
+  </main>
+  <script src="/script.js"></script>
+</body>
+</html>

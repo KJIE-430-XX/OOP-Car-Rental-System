@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign in | Car Rental System</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body class="auth-page">
+  <main class="auth-shell">
+    <section class="auth-panel">
+      <a class="back-link" href="/">&#8592; Car Rental System</a>
+      <div class="auth-header">
+        <p class="eyebrow">ACCOUNT ACCESS</p>
+        <h1>Sign in</h1>
+        <p>Access your rentals and account details.</p>
+      </div>
+
+      <form id="login-form" onsubmit="login(event)">
+        <label for="login-username">Username</label>
+        <input id="login-username" autocomplete="username" placeholder="Enter your username" required>
+        <label for="login-password">Password</label>
+        <input id="login-password" type="password" autocomplete="current-password" placeholder="Enter your password" required>
+        <button class="submit-button" type="submit">Sign in <span aria-hidden="true">&#8594;</span></button>
+      </form>
+
+      <p id="result" class="result" role="status"></p>
+      <p class="form-footer">New to the system? <a href="/register.html">Create an account</a></p>
+    </section>
+  </main>
+  <script src="/script.js"></script>
+</body>
+</html>
