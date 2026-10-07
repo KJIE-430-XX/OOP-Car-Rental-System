@@ -130,7 +130,8 @@ label {
   font-weight: 700;
 }
 
-input {
+input,
+select {
   width: 100%;
   padding: 13px 14px;
   color: var(--primary);
@@ -142,7 +143,8 @@ input {
   outline: none;
 }
 
-input:focus {
+input:focus,
+select:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.15);
 }
@@ -516,6 +518,96 @@ input:focus {
 
 .vehicle-link:hover {
   color: var(--accent-focus);
+}
+
+.category-page h1 {
+  margin: 0;
+  font-size: 2.4rem;
+  font-weight: 400;
+}
+
+.category-page .section-heading .submit-button {
+  margin: 0;
+}
+
+.vehicle-list {
+  display: grid;
+  gap: 14px;
+  padding-top: 22px;
+}
+
+.vehicle-item,
+.vehicle-form {
+  padding: 24px;
+  background: #FFFFFF;
+  border: 1px solid var(--border);
+}
+
+.vehicle-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.vehicle-item h2 {
+  margin: 0 0 8px;
+  font-weight: 400;
+}
+
+.vehicle-item p:not(.vehicle-kicker),
+.empty-state {
+  margin: 0;
+  color: var(--text-secondary);
+  font-family: Arial, sans-serif;
+  font-size: 0.88rem;
+}
+
+.vehicle-item dl {
+  display: flex;
+  gap: 24px;
+  margin: 0;
+  font-family: Arial, sans-serif;
+}
+
+.vehicle-item dt {
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+}
+
+.vehicle-item dd {
+  margin: 5px 0 0;
+  font-weight: 700;
+}
+
+.vehicle-form {
+  display: grid;
+  gap: 10px;
+  max-width: 560px;
+  margin-top: 24px;
+}
+
+.vehicle-form.hidden {
+  display: none;
+}
+
+.vehicle-form h2 {
+  margin: 0 0 8px;
+  font-weight: 400;
+}
+
+.vehicle-form .submit-button {
+  margin-top: 10px;
+}
+
+@media (max-width: 700px) {
+  .vehicle-item {
+    display: block;
+  }
+
+  .vehicle-item dl {
+    margin-top: 20px;
+  }
 }
 
 @media (max-width: 760px) {
