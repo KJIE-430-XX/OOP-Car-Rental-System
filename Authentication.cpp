@@ -132,6 +132,7 @@ CustomerRegistrationResult AuthenticationService::registerAccount(
     }
 }
 
+// Main login function; All provider use the same login logic (Admin || Customer)
 LoginResult AuthenticationService::login(
     const string& username,
     const string& password
