@@ -25,6 +25,8 @@ link: http://localhost:18080/
 
 using namespace std;
 
+string readFile(const string& path);
+
 namespace {
 const string databasePath = "car_rental.db";
 mutex sessionsMutex;
@@ -68,6 +70,34 @@ bool isAdministrator(const crow::request& request) {
     lock_guard<mutex> lock(sessionsMutex);
     const auto found = administratorSessions.find(session);
     return found != administratorSessions.end() && found->second;
+}
+
+// Check authorization
+bool isAuthenticated(const crow::request& request) {
+    const string session = sessionFromRequest(request);
+    lock_guard<mutex> lock(sessionsMutex);
+    return administratorSessions.find(session) != administratorSessions.end();
+}
+
+// Helper function: redirect to login page when user access is unauthorized
+crow::response redirectToLogin() {
+    crow::response response(302);
+    response.set_header("Location", "/login.html");
+    return response;
+}
+
+// Function: Call isAuthenticated to check access and returns redirectToLogin() if false
+crow::response protectedPage(
+    const crow::request& request,
+    const string& path
+) {
+    if (!isAuthenticated(request)) {
+        return redirectToLogin();
+    }
+
+    crow::response response(readFile(path));
+    response.set_header("Content-Type", "text/html");
+    return response;
 }
 
 // converts a category string into a concrete C++ object since the category is derived class
@@ -156,34 +186,24 @@ int main() {
         return res;
     });
 
-    CROW_ROUTE(app, "/home.html")([]() {
-        crow::response res(readFile("frontend/index.html"));
-        res.set_header("Content-Type", "text/html");
-        return res;
+    CROW_ROUTE(app, "/home.html")([](const crow::request& request) {
+        return protectedPage(request, "frontend/index.html");
     });
 
-    CROW_ROUTE(app, "/add_vehicle.html")([]() {
-        crow::response res(readFile("frontend/add_vehicle.html"));
-        res.set_header("Content-Type", "text/html");
-        return res;
+    CROW_ROUTE(app, "/add_vehicle.html")([](const crow::request& request) {
+        return protectedPage(request, "frontend/add_vehicle.html");
     });
 
-    CROW_ROUTE(app, "/standardcar.html")([]() {
-        crow::response res(readFile("frontend/standardcar.html"));
-        res.set_header("Content-Type", "text/html");
-        return res;
+    CROW_ROUTE(app, "/standardcar.html")([](const crow::request& request) {
+        return protectedPage(request, "frontend/standardcar.html");
     });
 
-    CROW_ROUTE(app, "/luxurycar.html")([]() {
-        crow::response res(readFile("frontend/luxurycar.html"));
-        res.set_header("Content-Type", "text/html");
-        return res;
+    CROW_ROUTE(app, "/luxurycar.html")([](const crow::request& request) {
+        return protectedPage(request, "frontend/luxurycar.html");
     });
 
-    CROW_ROUTE(app, "/suv.html")([]() {
-        crow::response res(readFile("frontend/suv.html"));
-        res.set_header("Content-Type", "text/html");
-        return res;
+    CROW_ROUTE(app, "/suv.html")([](const crow::request& request) {
+        return protectedPage(request, "frontend/suv.html");
     });
 
     CROW_ROUTE(app, "/style.css")([]() {
@@ -230,9 +250,23 @@ int main() {
         return response;
     });
 
+    CROW_ROUTE(app, "/api/logout").methods(crow::HTTPMethod::POST)
+    ([](const crow::request& request) {
+        const string session = sessionFromRequest(request);
+        if (!session.empty()) {
+            lock_guard<mutex> lock(sessionsMutex);
+            administratorSessions.erase(session);
+        }
+
+        crow::response response(200, R"({"message":"Logged out successfully."})");
+        response.set_header("Set-Cookie", "session=; Path=/; Max-Age=0; HttpOnly");
+        return response;
+    });
+
     CROW_ROUTE(app, "/api/session").methods(crow::HTTPMethod::GET)
     ([](const crow::request& request) {
         crow::json::wvalue responseBody;
+        responseBody["authenticated"] = isAuthenticated(request);
         responseBody["administrator"] = isAdministrator(request);
         return crow::response(200, responseBody);
     });
@@ -240,6 +274,10 @@ int main() {
     //Get the list vehicles (optionally filtered by ?category=)
     CROW_ROUTE(app, "/api/vehicles").methods(crow::HTTPMethod::GET)
     ([](const crow::request& request) {
+        if (!isAuthenticated(request)) {
+            return jsonMessage(401, "Authentication is required.");
+        }
+
         const string category = request.url_params.get("category")
             ? request.url_params.get("category") : "";
         if (!makeVehicle(category, "", "", "", "", "", "", 0, 0, 0, 0) && !category.empty()) {
@@ -293,6 +331,10 @@ int main() {
     CROW_ROUTE(app, "/api/vehicles").methods(crow::HTTPMethod::POST)
     ([](const crow::request& request) {
 
+        if (!isAuthenticated(request)) {
+            return jsonMessage(401, "Authentication is required.");
+        }
+
         // Return error message if user not an admin
         if (!isAdministrator(request)) {
             return jsonMessage(403, "Administrator access is required.");
@@ -344,6 +386,90 @@ int main() {
             return jsonMessage(400, "Mileage and rates are out of range.");
         } catch (const SQLite::Exception&) {
             return jsonMessage(409, "That license plate already exists.");
+        }
+    });
+
+    CROW_ROUTE(app, "/api/vehicles/<string>").methods(crow::HTTPMethod::PUT)
+    ([](const crow::request& request, const string& vehicleId) {
+        if (!isAuthenticated(request)) {
+            return jsonMessage(401, "Authentication is required.");
+        }
+        if (!isAdministrator(request)) {
+            return jsonMessage(403, "Administrator access is required.");
+        }
+
+        auto body = crow::json::load(request.body);
+        if (!body || !hasStringFields(body, {
+            "plate", "brand", "model", "description", "category", "status", "mileage",
+            "daily_rate", "security_deposit", "insurance_rate"
+        })) {
+            return jsonMessage(400, "All vehicle fields are required.");
+        }
+
+        const string category = body["category"].s();
+        const string status = body["status"].s();
+        if (!makeVehicle(category, "", "", "", "", "", "", 0, 0, 0, 0)) {
+            return jsonMessage(400, "Unknown vehicle category.");
+        }
+        if (status != "Available" && status != "Rented" && status != "Under_Maintenance") {
+            return jsonMessage(400, "Invalid vehicle status.");
+        }
+
+        try {
+            SQLite::Database database(databasePath, SQLite::OPEN_READWRITE);
+            SQLite::Statement statement(
+                database,
+                "UPDATE Vehicles SET license_plate = ?, brand = ?, model = ?, description = ?, "
+                "vehicle_type = ?, status = ?, mileage = ?, daily_rate = ?, security_deposit = ?, "
+                "insurance_rate = ? WHERE vehicle_id = ?"
+            );
+            statement.bind(1, body["plate"].s());
+            statement.bind(2, body["brand"].s());
+            statement.bind(3, body["model"].s());
+            statement.bind(4, body["description"].s());
+            statement.bind(5, category);
+            statement.bind(6, status);
+            statement.bind(7, stod(body["mileage"].s()));
+            statement.bind(8, stod(body["daily_rate"].s()));
+            statement.bind(9, stod(body["security_deposit"].s()));
+            statement.bind(10, stod(body["insurance_rate"].s()));
+            statement.bind(11, vehicleId);
+            statement.exec();
+
+            if (database.getTotalChanges() == 0) {
+                return jsonMessage(404, "Vehicle not found.");
+            }
+            return jsonMessage(200, "Vehicle updated successfully.");
+        } catch (const invalid_argument&) {
+            return jsonMessage(400, "Mileage and rates must be valid numbers.");
+        } catch (const out_of_range&) {
+            return jsonMessage(400, "Mileage and rates are out of range.");
+        } catch (const SQLite::Exception&) {
+            return jsonMessage(409, "That license plate already exists.");
+        }
+    });
+
+    CROW_ROUTE(app, "/api/vehicles/<string>").methods(crow::HTTPMethod::DELETE)
+    ([](const crow::request& request, const string& vehicleId) {
+        if (!isAuthenticated(request)) {
+            return jsonMessage(401, "Authentication is required.");
+        }
+        if (!isAdministrator(request)) {
+            return jsonMessage(403, "Administrator access is required.");
+        }
+
+        try {
+            SQLite::Database database(databasePath, SQLite::OPEN_READWRITE);
+            SQLite::Statement statement(database, "DELETE FROM Vehicles WHERE vehicle_id = ?");
+            statement.bind(1, vehicleId);
+            statement.exec();
+
+            if (database.getTotalChanges() == 0) {
+                return jsonMessage(404, "Vehicle not found.");
+            }
+            return jsonMessage(200, "Vehicle deleted successfully.");
+        } catch (const SQLite::Exception&) {
+            return jsonMessage(409, "This vehicle cannot be deleted because it is used by a rental record.");
         }
     });
 
