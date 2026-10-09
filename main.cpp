@@ -70,7 +70,8 @@ bool isAdministrator(const crow::request& request) {
     return found != administratorSessions.end() && found->second;
 }
 
-unique_ptr<Vehicle> makeVehicle(
+// converts a category string into a concrete C++ object since the category is derived class
+std::unique_ptr<Vehicle> makeVehicle(
     const string& category,
     const string& id,
     const string& plate,
@@ -258,6 +259,9 @@ int main() {
             }
 
             crow::json::wvalue::list vehicles;
+
+            // After get the query results, passes them into makeVehicle(...) to create a concrete polymorphic object
+            // Always ensure the category is exist first (StandardCar, LuxuryCar, SUV)
             while (query.executeStep()) {
                 auto vehicle = makeVehicle(
                     query.getColumn(5).getString(),
@@ -273,6 +277,7 @@ int main() {
                     query.getColumn(10).getDouble()
                 );
                 if (vehicle) {
+                    // Call the getters, and convert them into json
                     vehicles.push_back(vehicleJson(*vehicle));
                 }
             }
@@ -287,6 +292,8 @@ int main() {
     // Add a vehicle (admin only) -- Post method to pass the data to endpoint
     CROW_ROUTE(app, "/api/vehicles").methods(crow::HTTPMethod::POST)
     ([](const crow::request& request) {
+
+        // Return error message if user not an admin
         if (!isAdministrator(request)) {
             return jsonMessage(403, "Administrator access is required.");
         }
@@ -304,10 +311,13 @@ int main() {
             body["status"].s() != "Under_Maintenance") {
             return jsonMessage(400, "Invalid vehicle status.");
         }
+
+        // Return error message if category not exist
         if (!makeVehicle(category, "", "", "", "", "", "", 0, 0, 0, 0)) {
             return jsonMessage(400, "Unknown vehicle category.");
         }
 
+        // Start to try catch for bind (insert) the vehicle
         try {
             SQLite::Database database(databasePath, SQLite::OPEN_READWRITE);
             SQLite::Statement statement(

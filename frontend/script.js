@@ -71,6 +71,7 @@ async function loadVehicles() {
     const result = document.getElementById('vehicle-result');
 
     try {
+      // Different category different page
       const response = await fetch(`/api/vehicles?category=${encodeURIComponent(category)}`);
       const data = await response.json();
       if (!response.ok) throw new Error(data.message);
