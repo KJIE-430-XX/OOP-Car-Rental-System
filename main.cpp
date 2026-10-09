@@ -389,6 +389,90 @@ int main() {
         }
     });
 
+    CROW_ROUTE(app, "/api/vehicles/<string>").methods(crow::HTTPMethod::PUT)
+    ([](const crow::request& request, const string& vehicleId) {
+        if (!isAuthenticated(request)) {
+            return jsonMessage(401, "Authentication is required.");
+        }
+        if (!isAdministrator(request)) {
+            return jsonMessage(403, "Administrator access is required.");
+        }
+
+        auto body = crow::json::load(request.body);
+        if (!body || !hasStringFields(body, {
+            "plate", "brand", "model", "description", "category", "status", "mileage",
+            "daily_rate", "security_deposit", "insurance_rate"
+        })) {
+            return jsonMessage(400, "All vehicle fields are required.");
+        }
+
+        const string category = body["category"].s();
+        const string status = body["status"].s();
+        if (!makeVehicle(category, "", "", "", "", "", "", 0, 0, 0, 0)) {
+            return jsonMessage(400, "Unknown vehicle category.");
+        }
+        if (status != "Available" && status != "Rented" && status != "Under_Maintenance") {
+            return jsonMessage(400, "Invalid vehicle status.");
+        }
+
+        try {
+            SQLite::Database database(databasePath, SQLite::OPEN_READWRITE);
+            SQLite::Statement statement(
+                database,
+                "UPDATE Vehicles SET license_plate = ?, brand = ?, model = ?, description = ?, "
+                "vehicle_type = ?, status = ?, mileage = ?, daily_rate = ?, security_deposit = ?, "
+                "insurance_rate = ? WHERE vehicle_id = ?"
+            );
+            statement.bind(1, body["plate"].s());
+            statement.bind(2, body["brand"].s());
+            statement.bind(3, body["model"].s());
+            statement.bind(4, body["description"].s());
+            statement.bind(5, category);
+            statement.bind(6, status);
+            statement.bind(7, stod(body["mileage"].s()));
+            statement.bind(8, stod(body["daily_rate"].s()));
+            statement.bind(9, stod(body["security_deposit"].s()));
+            statement.bind(10, stod(body["insurance_rate"].s()));
+            statement.bind(11, vehicleId);
+            statement.exec();
+
+            if (database.getTotalChanges() == 0) {
+                return jsonMessage(404, "Vehicle not found.");
+            }
+            return jsonMessage(200, "Vehicle updated successfully.");
+        } catch (const invalid_argument&) {
+            return jsonMessage(400, "Mileage and rates must be valid numbers.");
+        } catch (const out_of_range&) {
+            return jsonMessage(400, "Mileage and rates are out of range.");
+        } catch (const SQLite::Exception&) {
+            return jsonMessage(409, "That license plate already exists.");
+        }
+    });
+
+    CROW_ROUTE(app, "/api/vehicles/<string>").methods(crow::HTTPMethod::DELETE)
+    ([](const crow::request& request, const string& vehicleId) {
+        if (!isAuthenticated(request)) {
+            return jsonMessage(401, "Authentication is required.");
+        }
+        if (!isAdministrator(request)) {
+            return jsonMessage(403, "Administrator access is required.");
+        }
+
+        try {
+            SQLite::Database database(databasePath, SQLite::OPEN_READWRITE);
+            SQLite::Statement statement(database, "DELETE FROM Vehicles WHERE vehicle_id = ?");
+            statement.bind(1, vehicleId);
+            statement.exec();
+
+            if (database.getTotalChanges() == 0) {
+                return jsonMessage(404, "Vehicle not found.");
+            }
+            return jsonMessage(200, "Vehicle deleted successfully.");
+        } catch (const SQLite::Exception&) {
+            return jsonMessage(409, "This vehicle cannot be deleted because it is used by a rental record.");
+        }
+    });
+
     CROW_ROUTE(app, "/api/register").methods(crow::HTTPMethod::POST)
     ([&authenticationService](const crow::request& req) {
         auto body = crow::json::load(req.body);
