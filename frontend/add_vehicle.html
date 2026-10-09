@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add vehicle | Car Rental System</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body class="auth-page">
+  <main class="auth-shell">
+    <section class="auth-panel">
+      <a class="back-link" href="/home.html">&#8592; Back to fleet</a>
+      <div class="auth-header">
+        <p class="eyebrow">FLEET MANAGEMENT</p>
+        <h1>Add a vehicle</h1>
+        <p>Add a vehicle to the category selected below.</p>
+      </div>
+      <form id="add-vehicle-form" class="vehicle-form hidden">
+        <label for="vehicle-plate">License plate</label>
+        <input id="vehicle-plate" name="plate" required>
+        <label for="vehicle-brand">Brand</label>
+        <input id="vehicle-brand" name="brand" placeholder="Toyota or Honda" required>
+        <label for="vehicle-model">Model</label>
+        <input id="vehicle-model" name="model" placeholder="Vios or City" required>
+        <label for="vehicle-description">Description</label>
+        <textarea id="vehicle-description" name="description" placeholder="Describe this vehicle" required></textarea>
+        <label for="vehicle-category">Category</label>
+        <select id="vehicle-category" name="category" required>
+          <option value="StandardCar">StandardCar</option>
+          <option value="LuxuryCar">LuxuryCar</option>
+          <option value="SUV">SUV</option>
+        </select>
+        <label for="vehicle-status">Status</label>
+        <select id="vehicle-status" name="status" required>
+          <option value="Available">Available</option>
+          <option value="Rented">Rented</option>
+          <option value="Under_Maintenance">Under_Maintenance</option>
+        </select>
+        <label for="vehicle-mileage">Mileage</label>
+        <input id="vehicle-mileage" name="mileage" type="number" min="0" step="0.1" required>
+        <label for="vehicle-daily-rate">Daily rate</label>
+        <input id="vehicle-daily-rate" name="daily_rate" type="number" min="0" step="0.01" required>
+        <label for="vehicle-security-deposit">Security deposit</label>
+        <input id="vehicle-security-deposit" name="security_deposit" type="number" min="0" step="0.01" required>
+        <label for="vehicle-insurance-rate">Insurance rate</label>
+        <input id="vehicle-insurance-rate" name="insurance_rate" type="number" min="0" step="0.01" required>
+        <button class="submit-button" type="submit">Save vehicle</button>
+      </form>
+      <p id="vehicle-result" class="result" role="status"></p>
+    </section>
+  </main>
+  <script src="/script.js"></script>
+</body>
+</html>

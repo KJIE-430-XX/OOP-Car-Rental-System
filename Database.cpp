@@ -16,6 +16,7 @@ SQLite::Database openDatabase(const string& databasePath) {
 void initializeDatabase(const string& databasePath) {
     SQLite::Database database = openDatabase(databasePath);
 
+    database.exec("PRAGMA busy_timeout = 5000;");
     database.exec("PRAGMA foreign_keys = ON;");
 
     database.exec(R"sql(
@@ -29,8 +30,11 @@ void initializeDatabase(const string& databasePath) {
         );
 
         CREATE TABLE IF NOT EXISTS Vehicles (
-            vehicle_id VARCHAR(20) PRIMARY KEY,
+            vehicle_id INTEGER PRIMARY KEY AUTOINCREMENT,
             license_plate VARCHAR(20) NOT NULL UNIQUE,
+            brand VARCHAR(50) NOT NULL,
+            model VARCHAR(50) NOT NULL,
+            description VARCHAR(255) NOT NULL,
             vehicle_type VARCHAR(20) NOT NULL,
             status VARCHAR(20) NOT NULL,
             mileage FLOAT NOT NULL,
@@ -75,5 +79,76 @@ void initializeDatabase(const string& databasePath) {
         SET password = 'carrentadmin430', role = 'super'
         WHERE username = 'admin';
     )sql");
-}
 
+    try {
+        database.exec("ALTER TABLE Vehicles ADD COLUMN brand VARCHAR(50) NOT NULL DEFAULT ''");
+    } catch (const SQLite::Exception&) {
+    }
+    try {
+        database.exec("ALTER TABLE Vehicles ADD COLUMN model VARCHAR(50) NOT NULL DEFAULT ''");
+    } catch (const SQLite::Exception&) {
+    }
+    try {
+        database.exec("ALTER TABLE Vehicles ADD COLUMN description VARCHAR(255) NOT NULL DEFAULT ''");
+    } catch (const SQLite::Exception&) {
+    }
+
+    bool integerVehicleId = false;
+    {
+        SQLite::Statement vehicleInfo(database, "PRAGMA table_info(Vehicles)");
+        while (vehicleInfo.executeStep()) {
+            if (vehicleInfo.getColumn(1).getString() == "vehicle_id") {
+                integerVehicleId = vehicleInfo.getColumn(2).getString() == "INTEGER";
+                break;
+            }
+        }
+    }
+
+    if (!integerVehicleId) {
+        database.exec(R"sql(
+            PRAGMA foreign_keys = OFF;
+            BEGIN TRANSACTION;
+            CREATE TABLE Vehicles_new (
+                vehicle_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                license_plate VARCHAR(20) NOT NULL UNIQUE,
+                brand VARCHAR(50) NOT NULL,
+                model VARCHAR(50) NOT NULL,
+                description VARCHAR(255) NOT NULL,
+                vehicle_type VARCHAR(20) NOT NULL,
+                status VARCHAR(20) NOT NULL,
+                mileage FLOAT NOT NULL,
+                daily_rate DOUBLE NOT NULL,
+                security_deposit DOUBLE NOT NULL,
+                insurance_rate FLOAT NOT NULL
+            );
+            INSERT INTO Vehicles_new
+                (license_plate, brand, model, description, vehicle_type, status, mileage,
+                 daily_rate, security_deposit, insurance_rate)
+            SELECT license_plate, brand, model, description, vehicle_type, status, mileage,
+                   daily_rate, security_deposit, insurance_rate
+            FROM Vehicles
+            ORDER BY rowid;
+            CREATE TEMPORARY TABLE VehicleIdMap AS
+                SELECT old.vehicle_id AS old_id, new.vehicle_id AS new_id
+                FROM Vehicles old
+                JOIN Vehicles_new new ON old.license_plate = new.license_plate;
+            UPDATE Transactions
+            SET vehicle_id = (
+                SELECT new_id FROM VehicleIdMap
+                WHERE old_id = Transactions.vehicle_id
+            )
+            WHERE vehicle_id IN (SELECT old_id FROM VehicleIdMap);
+            UPDATE Damage_logs
+            SET vehicle_id = (
+                SELECT new_id FROM VehicleIdMap
+                WHERE old_id = Damage_logs.vehicle_id
+            )
+            WHERE vehicle_id IN (SELECT old_id FROM VehicleIdMap);
+            DROP TABLE Vehicles;
+            ALTER TABLE Vehicles_new RENAME TO Vehicles;
+            DROP TABLE VehicleIdMap;
+            COMMIT;
+            PRAGMA foreign_keys = ON;
+        )sql");
+    }
+}

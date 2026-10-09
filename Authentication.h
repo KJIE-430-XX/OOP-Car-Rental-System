@@ -88,5 +88,11 @@ public:
 
 private:
     string databasePath;
-    vector<unique_ptr<AuthenticationProvider>> providers;
+    // Define the vector as providers --> use providers.push_back
+    // Vector is used to store multiple authentication handlers in a single, ordered list
+    // Why need unique_ptr: Standard C++ containers cannot directly store interface classes (AuthenticationProvider)
+    // Purpose Vector: Allow us to add new Login Provide easily, such as ManagerAuthenticationProvider
+    // Just need simply push_back a new provider into the vector
+    // Currently have: AdministratorAuthenticationProvider and CustomerAuthenticationProvider
+    std::vector<unique_ptr<AuthenticationProvider>> providers;
 };

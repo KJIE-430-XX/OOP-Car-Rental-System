@@ -37,7 +37,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(SQLiteCpp PUBLIC -include cstdint)
 endif()
 
-add_executable(CarRentalSystem main.cpp Database.cpp Authentication.cpp)
+add_executable(CarRentalSystem main.cpp Database.cpp Authentication.cpp Vehicle.cpp)
 
 # Link to the Crow Library
 target_link_libraries(CarRentalSystem PRIVATE Crow::Crow SQLiteCpp)
@@ -48,4 +48,3 @@ enable_testing()
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
 include(CPack)
-
