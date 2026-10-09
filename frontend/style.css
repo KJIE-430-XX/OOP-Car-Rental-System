@@ -169,8 +169,13 @@ select:focus {
   background: var(--accent-hover);
 }
 
+.button-link {
+  cursor: pointer;
+}
+
 .submit-button:focus-visible,
-.mode-button:focus-visible {
+.mode-button:focus-visible,
+.button-link:focus-visible {
   outline: 3px solid var(--accent-focus);
   outline-offset: 2px;
 }

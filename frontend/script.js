@@ -45,6 +45,21 @@ async function register(event) {
   }
 }
 
+async function logout() {
+  const response = await fetch('/api/logout', { method: 'POST' });
+  if (response.ok) {
+    window.location.href = '/login.html';
+    return;
+  }
+
+  const data = await response.json();
+  const result = document.getElementById('result') || document.getElementById('vehicle-result');
+  if (result) {
+    result.textContent = data.message || 'Unable to log out.';
+    result.className = 'result error';
+  }
+}
+
 function displayVehicles(vehicles) {
     const list = document.getElementById('vehicle-list');
     if (!vehicles.length) {
@@ -144,6 +159,11 @@ async function initializeAdminControls() {
 
 if (document.body.dataset.category) {
   loadVehicles();
+}
+
+const logoutButton = document.getElementById('logout-button');
+if (logoutButton) {
+  logoutButton.addEventListener('click', logout);
 }
 
 initializeAdminControls();

@@ -25,6 +25,8 @@ link: http://localhost:18080/
 
 using namespace std;
 
+string readFile(const string& path);
+
 namespace {
 const string databasePath = "car_rental.db";
 mutex sessionsMutex;
@@ -68,6 +70,34 @@ bool isAdministrator(const crow::request& request) {
     lock_guard<mutex> lock(sessionsMutex);
     const auto found = administratorSessions.find(session);
     return found != administratorSessions.end() && found->second;
+}
+
+// Check authorization
+bool isAuthenticated(const crow::request& request) {
+    const string session = sessionFromRequest(request);
+    lock_guard<mutex> lock(sessionsMutex);
+    return administratorSessions.find(session) != administratorSessions.end();
+}
+
+// Helper function: redirect to login page when user access is unauthorized
+crow::response redirectToLogin() {
+    crow::response response(302);
+    response.set_header("Location", "/login.html");
+    return response;
+}
+
+// Function: Call isAuthenticated to check access and returns redirectToLogin() if false
+crow::response protectedPage(
+    const crow::request& request,
+    const string& path
+) {
+    if (!isAuthenticated(request)) {
+        return redirectToLogin();
+    }
+
+    crow::response response(readFile(path));
+    response.set_header("Content-Type", "text/html");
+    return response;
 }
 
 // converts a category string into a concrete C++ object since the category is derived class
@@ -156,34 +186,24 @@ int main() {
         return res;
     });
 
-    CROW_ROUTE(app, "/home.html")([]() {
-        crow::response res(readFile("frontend/index.html"));
-        res.set_header("Content-Type", "text/html");
-        return res;
+    CROW_ROUTE(app, "/home.html")([](const crow::request& request) {
+        return protectedPage(request, "frontend/index.html");
     });
 
-    CROW_ROUTE(app, "/add_vehicle.html")([]() {
-        crow::response res(readFile("frontend/add_vehicle.html"));
-        res.set_header("Content-Type", "text/html");
-        return res;
+    CROW_ROUTE(app, "/add_vehicle.html")([](const crow::request& request) {
+        return protectedPage(request, "frontend/add_vehicle.html");
     });
 
-    CROW_ROUTE(app, "/standardcar.html")([]() {
-        crow::response res(readFile("frontend/standardcar.html"));
-        res.set_header("Content-Type", "text/html");
-        return res;
+    CROW_ROUTE(app, "/standardcar.html")([](const crow::request& request) {
+        return protectedPage(request, "frontend/standardcar.html");
     });
 
-    CROW_ROUTE(app, "/luxurycar.html")([]() {
-        crow::response res(readFile("frontend/luxurycar.html"));
-        res.set_header("Content-Type", "text/html");
-        return res;
+    CROW_ROUTE(app, "/luxurycar.html")([](const crow::request& request) {
+        return protectedPage(request, "frontend/luxurycar.html");
     });
 
-    CROW_ROUTE(app, "/suv.html")([]() {
-        crow::response res(readFile("frontend/suv.html"));
-        res.set_header("Content-Type", "text/html");
-        return res;
+    CROW_ROUTE(app, "/suv.html")([](const crow::request& request) {
+        return protectedPage(request, "frontend/suv.html");
     });
 
     CROW_ROUTE(app, "/style.css")([]() {
@@ -230,9 +250,23 @@ int main() {
         return response;
     });
 
+    CROW_ROUTE(app, "/api/logout").methods(crow::HTTPMethod::POST)
+    ([](const crow::request& request) {
+        const string session = sessionFromRequest(request);
+        if (!session.empty()) {
+            lock_guard<mutex> lock(sessionsMutex);
+            administratorSessions.erase(session);
+        }
+
+        crow::response response(200, R"({"message":"Logged out successfully."})");
+        response.set_header("Set-Cookie", "session=; Path=/; Max-Age=0; HttpOnly");
+        return response;
+    });
+
     CROW_ROUTE(app, "/api/session").methods(crow::HTTPMethod::GET)
     ([](const crow::request& request) {
         crow::json::wvalue responseBody;
+        responseBody["authenticated"] = isAuthenticated(request);
         responseBody["administrator"] = isAdministrator(request);
         return crow::response(200, responseBody);
     });
@@ -240,6 +274,10 @@ int main() {
     //Get the list vehicles (optionally filtered by ?category=)
     CROW_ROUTE(app, "/api/vehicles").methods(crow::HTTPMethod::GET)
     ([](const crow::request& request) {
+        if (!isAuthenticated(request)) {
+            return jsonMessage(401, "Authentication is required.");
+        }
+
         const string category = request.url_params.get("category")
             ? request.url_params.get("category") : "";
         if (!makeVehicle(category, "", "", "", "", "", "", 0, 0, 0, 0) && !category.empty()) {
@@ -292,6 +330,10 @@ int main() {
     // Add a vehicle (admin only) -- Post method to pass the data to endpoint
     CROW_ROUTE(app, "/api/vehicles").methods(crow::HTTPMethod::POST)
     ([](const crow::request& request) {
+
+        if (!isAuthenticated(request)) {
+            return jsonMessage(401, "Authentication is required.");
+        }
 
         // Return error message if user not an admin
         if (!isAdministrator(request)) {
