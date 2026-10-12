@@ -169,8 +169,13 @@ select:focus {
   background: var(--accent-hover);
 }
 
+.button-link {
+  cursor: pointer;
+}
+
 .submit-button:focus-visible,
-.mode-button:focus-visible {
+.mode-button:focus-visible,
+.button-link:focus-visible {
   outline: 3px solid var(--accent-focus);
   outline-offset: 2px;
 }
@@ -241,6 +246,19 @@ select:focus {
   padding: 44px 52px 48px;
 }
 
+.add-vehicle-section .auth-shell {
+  width: min(100%, 760px);
+}
+
+.add-vehicle-section .auth-panel {
+  padding: 44px 56px 48px;
+}
+
+.add-vehicle-section .vehicle-form {
+  width: 100%;
+  max-width: none;
+}
+
 .auth-page .auth-header h1 {
   margin: 0 0 8px;
   font-size: 2.4rem;
@@ -248,11 +266,23 @@ select:focus {
 }
 
 .back-link,
-.form-footer a,
 .text-link {
   color: var(--accent-hover);
   font-family: Arial, sans-serif;
-  font-size: 0.82rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+  padding: 14px 14px;
+  color: #FFFFFF;
+  background: var(--accent);
+  border: 0;
+  text-decoration: none;
+}
+
+.form-footer a{
+  color: var(--accent-hover);
+  font-family: Arial, sans-serif;
+  font-size: 0.9rem;
   font-weight: 700;
   text-decoration: none;
 }
@@ -263,10 +293,28 @@ select:focus {
 }
 
 .back-link:hover,
-.form-footer a:hover,
 .text-link:hover {
-  color: var(--accent-focus);
+  background: var(--accent-hover);
+  /* text-decoration: underline; */
+}
+
+.form-footer a:hover {
   text-decoration: underline;
+}
+
+#logout-button {
+  background-color: rgb(255, 250, 250);
+  color: #6B21A8;
+  border-radius: 5px;
+}
+
+#logout-button:hover {
+  background-color: rgb(205, 184, 255);
+  color: 1E1B4B;
+}
+
+#add-vehicle-toggle {
+  border-radius: 5px;
 }
 
 .form-footer {
@@ -544,10 +592,18 @@ select:focus {
 }
 
 .vehicle-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "summary actions"
+    "meta actions";
   gap: 24px;
+}
+
+.vehicle-summary {
+  grid-area: summary;
+  min-width: 0;
 }
 
 .vehicle-item h2 {
@@ -555,7 +611,7 @@ select:focus {
   font-weight: 400;
 }
 
-.vehicle-item p:not(.vehicle-kicker),
+.vehicle-summary > p:not(.vehicle-kicker),
 .empty-state {
   margin: 0;
   color: var(--text-secondary);
@@ -563,7 +619,14 @@ select:focus {
   font-size: 0.88rem;
 }
 
+.vehicle-summary > p:not(.vehicle-kicker) {
+  height: 54px;
+  overflow-y: auto;
+  line-height: 1.55;
+}
+
 .vehicle-item dl {
+  grid-area: meta;
   display: flex;
   gap: 24px;
   margin: 0;
@@ -600,12 +663,91 @@ select:focus {
   margin-top: 10px;
 }
 
+.vehicle-actions {
+  grid-area: actions;
+  display: flex;
+  gap: 12px;
+  align-self: flex-start;
+}
+
+.vehicle-actions .button-link {
+  padding: 8px 12px;
+  color: #FFFFFF;
+  background: var(--accent);
+  border: 0;
+  border-radius: 2px;
+  font-family: Arial, sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.vehicle-actions .button-link:hover {
+  color: #FFFFFF;
+  background: var(--accent-hover);
+  text-decoration: none;
+}
+
+.vehicle-actions .button-link:active,
+.vehicle-actions .button-link:focus-visible {
+  color: #FFFFFF;
+  background: var(--accent-focus);
+}
+
+.vehicle-actions .danger-link {
+  color: #FFFFFF;
+  background-color: red;
+}
+
+.vehicle-actions .danger-link:hover {
+  background-color: rgb(255, 102, 102);
+}
+.vehicle-edit-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(140px, 1fr));
+  gap: 10px;
+  flex-basis: 100%;
+  grid-column: 1 / -1;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.vehicle-edit-form.hidden {
+  display: none;
+}
+
+.vehicle-edit-form label {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+}
+
+.vehicle-edit-form > label:nth-child(4),
+.vehicle-edit-form > label:nth-child(5),
+.vehicle-edit-form > label:nth-child(6),
+.vehicle-edit-form > div {
+  grid-column: 1 / -1;
+}
+
+.vehicle-edit-form .submit-button {
+  display: inline-flex;
+  margin: 8px 12px 0 0;
+}
+
 @media (max-width: 700px) {
   .vehicle-item {
     display: block;
   }
 
-  .vehicle-item dl {
+  .vehicle-actions {
+    margin-top: 20px;
+  }
+
+  .vehicle-edit-form {
+    margin-top: 20px;
+  }
+
+  .vehicle-meta {
     margin-top: 20px;
   }
 }
@@ -613,6 +755,19 @@ select:focus {
 @media (max-width: 760px) {
   .auth-page .auth-panel {
     padding: 34px 28px 38px;
+  }
+
+  .add-vehicle-section {
+    align-items: flex-start;
+    padding: 20px 12px;
+  }
+
+  .add-vehicle-section .auth-shell {
+    width: 100%;
+  }
+
+  .add-vehicle-section .auth-panel {
+    padding: 32px 20px 36px;
   }
 
   .back-link {
