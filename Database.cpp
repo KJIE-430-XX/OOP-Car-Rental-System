@@ -65,6 +65,19 @@ void initializeDatabase(const string& databasePath) {
             FOREIGN KEY (vehicle_id) REFERENCES Vehicles(vehicle_id)
         );
 
+        CREATE TABLE IF NOT EXISTS Reservations (
+            reservation_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            customer_id INTEGER NOT NULL,
+            vehicle_id INTEGER NOT NULL,
+            start_date VARCHAR(10) NOT NULL,
+            end_date VARCHAR(10) NOT NULL,
+            total_fee DOUBLE NOT NULL,
+            status VARCHAR(20) NOT NULL DEFAULT 'Confirmed',
+            checkout_date VARCHAR(10),
+            FOREIGN KEY (customer_id) REFERENCES Customers(customer_id),
+            FOREIGN KEY (vehicle_id) REFERENCES Vehicles(vehicle_id)
+        );
+
         CREATE TABLE IF NOT EXISTS Administrators (
             admin_id INTEGER PRIMARY KEY AUTOINCREMENT,
             username VARCHAR(30) NOT NULL,

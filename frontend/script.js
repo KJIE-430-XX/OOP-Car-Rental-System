@@ -6,6 +6,12 @@ function showResult(message, success) {
 
 let administratorSession = false;
 
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, character => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+  }[character]));
+}
+
 async function login(event) {
   event.preventDefault();
 
@@ -68,16 +74,19 @@ function displayVehicles(vehicles) {
       list.innerHTML = '';
       return;
     }
-    const escapeHtml = value => String(value).replace(/[&<>"']/g, character => ({
-      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
-    }[character]));
     list.innerHTML = vehicles.map(vehicle => `
       <article class="vehicle-item">
         <div class="vehicle-summary"><p class="vehicle-kicker">${escapeHtml(vehicle.category)}</p><h2>${escapeHtml(vehicle.brand)} ${escapeHtml(vehicle.model)}</h2>
         <p>${escapeHtml(vehicle.description)}</p></div>
         <dl class="vehicle-meta"><div><dt>Plate</dt><dd>${escapeHtml(vehicle.plate)}</dd></div>
         <div><dt>Status</dt><dd>${escapeHtml(vehicle.status)}</dd></div>
+        <div><dt>Current mileage</dt><dd>${Number(vehicle.mileage).toFixed(1)} km</dd></div>
         <div><dt>Daily rate</dt><dd>$${Number(vehicle.daily_rate).toFixed(2)}</dd></div></dl>
+        ${!administratorSession && vehicle.available ? `
+          <div class="vehicle-actions">
+            <button class="submit-button" type="button" onclick="bookVehicle('${escapeHtml(vehicle.id)}')">Book vehicle</button>
+          </div>
+        ` : ''}
         ${administratorSession ? `
           <div class="vehicle-actions">
             <button class="text-link button-link" type="button" onclick="editVehicle('${escapeHtml(vehicle.id)}')">Edit</button>
@@ -139,6 +148,263 @@ async function updateVehicle(event) {
   } catch (error) {
     result.textContent = error.message;
     result.className = 'result error';
+  }
+}
+
+async function bookVehicle(vehicleId) {
+  const dates = await chooseBookingDates();
+  if (!dates) return;
+
+  try {
+    const response = await fetch('/api/reservations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        vehicle_id: vehicleId,
+        start_date: dates.startDate,
+        end_date: dates.endDate
+      })
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message);
+    showReservationMessage(data.message, true);
+    await loadVehicles();
+    await loadReservations();
+  } catch (error) {
+    showReservationMessage(error.message, false);
+  }
+}
+
+function chooseBookingDates() {
+  return new Promise(resolve => {
+    const currentDate = new Date();
+    const today = [
+      currentDate.getFullYear(),
+      String(currentDate.getMonth() + 1).padStart(2, '0'),
+      String(currentDate.getDate()).padStart(2, '0')
+    ].join('-');
+    const modal = document.createElement('div');
+    modal.className = 'booking-modal';
+    modal.innerHTML = `
+      <form class="booking-dialog">
+        <h2>Book vehicle</h2>
+        <label>Start date
+          <input name="start_date" type="date" min="${today}" required>
+        </label>
+        <label>End date
+          <input name="end_date" type="date" min="${today}" required>
+        </label>
+        <p class="booking-dialog-error hidden"></p>
+        <div class="booking-dialog-actions">
+          <button class="submit-button" type="submit">Continue</button>
+          <button class="text-link button-link" type="button" data-cancel>Cancel</button>
+        </div>
+      </form>
+    `;
+    document.body.appendChild(modal);
+
+    const form = modal.querySelector('form');
+    const startInput = form.elements.start_date;
+    const endInput = form.elements.end_date;
+    const error = modal.querySelector('.booking-dialog-error');
+
+    startInput.addEventListener('change', () => {
+      endInput.min = startInput.value || today;
+      if (endInput.value && endInput.value < endInput.min) {
+        endInput.value = '';
+      }
+    });
+
+    const close = value => {
+      modal.remove();
+      resolve(value);
+    };
+
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      if (endInput.value < startInput.value) {
+        error.textContent = 'End date must be on or after the start date.';
+        error.classList.remove('hidden');
+        return;
+      }
+      close({
+        startDate: startInput.value,
+        endDate: endInput.value
+      });
+    });
+    modal.querySelector('[data-cancel]').addEventListener('click', () => close(null));
+    startInput.focus();
+  });
+}
+
+function showReservationMessage(message, success) {
+  const result = document.getElementById('vehicle-result');
+  if (result) {
+    result.textContent = message;
+    result.className = `result ${success ? 'success' : 'error'}`;
+  }
+}
+
+function chooseReturnedMileage(errorMessage = '') {
+  return new Promise(resolve => {
+    const modal = document.createElement('div');
+    modal.className = 'booking-modal';
+    modal.innerHTML = `
+      <form class="booking-dialog">
+        <h2>Check out vehicle</h2>
+        <p class="booking-dialog-error${errorMessage ? '' : ' hidden'}">${errorMessage ? escapeHtml(errorMessage) : ''}</p>
+        <label>Returned mileage
+          <input name="returned_mileage" type="number" min="0" step="0.1" required>
+        </label>
+        <div class="booking-dialog-actions">
+          <button class="submit-button" type="submit">Confirm checkout</button>
+          <button class="text-link button-link" type="button" data-cancel>Cancel</button>
+        </div>
+      </form>
+    `;
+    document.body.appendChild(modal);
+
+    const form = modal.querySelector('form');
+    const close = value => {
+      modal.remove();
+      resolve(value);
+    };
+
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      close(Number(form.elements.returned_mileage.value));
+    });
+    modal.querySelector('[data-cancel]').addEventListener('click', () => close(null));
+    form.elements.returned_mileage.focus();
+  });
+}
+
+async function checkoutVehicle(reservationId) {
+  let errorMessage = '';
+
+  while (true) {
+    const returnedMileage = await chooseReturnedMileage(errorMessage);
+    if (returnedMileage === null) return false;
+
+    const response = await fetch(`/api/reservations/${reservationId}/checkout`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ returned_mileage: returnedMileage })
+    });
+    const data = await response.json();
+    if (response.ok) return true;
+
+    if (response.status === 409) {
+      errorMessage = data.message;
+      continue;
+    }
+
+    throw new Error(data.message);
+  }
+}
+
+function ensureReservationList() {
+  let list = document.getElementById('reservation-list');
+  if (!list) {
+    list = document.createElement('section');
+    list.id = 'reservation-list';
+    list.className = 'reservation-list';
+    document.querySelector('.category-page').appendChild(list);
+  }
+  return list;
+}
+
+async function loadReservations() {
+  if (!document.body.dataset.category) return;
+
+  try {
+    const response = await fetch('/api/reservations');
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message);
+    const list = ensureReservationList();
+    list.innerHTML = '<h2>My bookings</h2>' + (
+      data.reservations.length
+        ? data.reservations.map(reservation => `
+          <article class="reservation-item">
+            <a class="reservation-item-link" href="/reservation.html?id=${encodeURIComponent(reservation.id)}">
+              <span>Vehicle #${escapeHtml(reservation.vehicle_id)}</span>
+              <span>${escapeHtml(reservation.start_date)} to ${escapeHtml(reservation.end_date)}</span>
+              <span>$${Number(reservation.total_fee).toFixed(2)}</span>
+              <span>${escapeHtml(reservation.status)}</span>
+            </a>
+            ${reservation.status === 'Confirmed'
+              ? `<button class="text-link button-link" type="button" onclick="checkoutReservation(${reservation.id})">Check out</button>`
+              : ''}
+          </article>
+        `).join('')
+        : '<p>No bookings yet.</p>'
+    );
+  } catch (error) {
+    showReservationMessage(error.message, false);
+  }
+}
+
+async function loadReservationDetails() {
+  const reservationId = new URLSearchParams(window.location.search).get('id');
+  const details = document.getElementById('reservation-details');
+  const result = document.getElementById('reservation-detail-result');
+  if (!reservationId || !details) return;
+
+  try {
+    const response = await fetch(`/api/reservations/${encodeURIComponent(reservationId)}`);
+    const reservation = await response.json();
+    if (!response.ok) throw new Error(reservation.message);
+
+    details.innerHTML = `
+      <div class="reservation-detail-heading">
+        <p class="vehicle-kicker">${escapeHtml(reservation.category)}</p>
+        <h2>${escapeHtml(reservation.brand)} ${escapeHtml(reservation.model)}</h2>
+        <p>${escapeHtml(reservation.description)}</p>
+      </div>
+      <dl class="reservation-detail-grid">
+        <div><dt>Booking number</dt><dd>#${escapeHtml(reservation.id)}</dd></div>
+        <div><dt>Vehicle ID</dt><dd>#${escapeHtml(reservation.vehicle_id)}</dd></div>
+        <div><dt>License plate</dt><dd>${escapeHtml(reservation.plate)}</dd></div>
+        <div><dt>Status</dt><dd>${escapeHtml(reservation.status)}</dd></div>
+        <div><dt>Start date</dt><dd>${escapeHtml(reservation.start_date)}</dd></div>
+        <div><dt>End date</dt><dd>${escapeHtml(reservation.end_date)}</dd></div>
+        <div><dt>Daily rate</dt><dd>$${Number(reservation.daily_rate).toFixed(2)}</dd></div>
+        <div><dt>Total fee</dt><dd>$${Number(reservation.total_fee).toFixed(2)}</dd></div>
+        ${reservation.checkout_date
+          ? `<div><dt>Checkout date</dt><dd>${escapeHtml(reservation.checkout_date)}</dd></div>`
+          : ''}
+      </dl>
+      ${reservation.status === 'Confirmed'
+        ? `<button class="submit-button" type="button" onclick="checkoutReservationFromDetails(${reservation.id})">Check out vehicle</button>`
+        : ''}
+    `;
+  } catch (error) {
+    result.textContent = error.message;
+    result.className = 'result error';
+  }
+}
+
+async function checkoutReservationFromDetails(reservationId) {
+  try {
+    if (await checkoutVehicle(reservationId)) {
+      window.location.reload();
+    }
+  } catch (error) {
+    const result = document.getElementById('reservation-detail-result');
+    result.textContent = error.message;
+    result.className = 'result error';
+  }
+}
+
+async function checkoutReservation(reservationId) {
+  try {
+    if (await checkoutVehicle(reservationId)) {
+      showReservationMessage('Vehicle checked out successfully.', true);
+      await loadVehicles();
+      await loadReservations();
+    }
+  } catch (error) {
+    showReservationMessage(error.message, false);
   }
 }
 
@@ -244,6 +510,10 @@ async function initializePage() {
   await initializeAdminControls();
   if (document.body.dataset.category) {
     await loadVehicles();
+    await loadReservations();
+  }
+  if (document.body.dataset.reservationPage !== undefined) {
+    await loadReservationDetails();
   }
 }
 
