@@ -597,7 +597,7 @@ select:focus {
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-areas:
     "summary actions"
-    "meta actions";
+    "meta maintenance";
   gap: 24px;
 }
 
@@ -668,6 +668,18 @@ select:focus {
   display: flex;
   gap: 12px;
   align-self: flex-start;
+  justify-content: flex-end;
+}
+
+.vehicle-maintenance-action {
+  grid-area: maintenance;
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-end;
+}
+
+.vehicle-maintenance-action .submit-button {
+  margin: 0;
 }
 
 .vehicle-actions .button-link {
@@ -875,6 +887,12 @@ select:focus {
   }
 
   .vehicle-actions {
+    margin-top: 20px;
+    justify-content: flex-start;
+  }
+
+  .vehicle-maintenance-action {
+    justify-content: flex-start;
     margin-top: 20px;
   }
 

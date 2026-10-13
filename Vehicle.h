@@ -68,14 +68,21 @@ private:
 // Declaring the RentalSystem class
 class RentalSystem {
 public:
-    Vehicle* findVehicle(const string& vehicleId);
-    vector<Vehicle*> findVehiclesByCategory(const string& category) const;
+
+    // Declare public member functions
+    void addVehicle(unique_ptr<Vehicle> vehicle);
+    void removeVehicle(const string& vehicleId);
+    Vehicle* findVehicle(const string& vehicleId); // Returns a raw pointer to a Vehicle
+    // vector<Vehicle*> findVehiclesByCategory(const string& category) const;
 
     bool rentVehicle(const string& vehicleId, const string& customerId);
     bool returnVehicle(const string& vehicleId, double returnedMileage);
 
 private:
-    unordered_map<string, unique_ptr<Vehicle>> vehicleMap_;
+    // Store vehicles in an in-memory hash map
+    // unordered_map stores key-value pairs:
+    // vehicleMap_ is the variable name
+    unordered_map<string, unique_ptr<Vehicle>> vehicleMap_; // 
 };
 
 // Derived class for Vehicle

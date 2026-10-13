@@ -112,7 +112,8 @@ crow::response protectedPage(
     return response;
 }
 
-// converts a category string into a concrete C++ object since the category is derived class
+// factory function: converts a category string into a concrete C++ object since the category is derived class
+// creates the correct Vehicle derived class from a category string
 std::unique_ptr<Vehicle> makeVehicle(
     const string& category,
     const string& id,
@@ -158,6 +159,37 @@ crow::json::wvalue vehicleJson(const Vehicle& vehicle) {
     return result;
 }
 
+// Helper function: loads existing vehicle records from the SQLite database into the RentalSystem object when the application starts
+void loadVehiclesFromDatabase(RentalSystem& rentalSystem) {
+    SQLite::Database database(databasePath, SQLite::OPEN_READWRITE);
+    SQLite::Statement query(
+        database,
+        "SELECT vehicle_id, license_plate, brand, model, description, vehicle_type, "
+        "status, mileage, daily_rate, security_deposit, insurance_rate "
+        "FROM Vehicles ORDER BY vehicle_id"
+    );
+
+    while (query.executeStep()) {
+        auto vehicle = makeVehicle( // creates the correct Vehicle derived class from a category string
+            query.getColumn(5).getString(),
+            query.getColumn(0).getString(),
+            query.getColumn(1).getString(),
+            query.getColumn(2).getString(),
+            query.getColumn(3).getString(),
+            query.getColumn(4).getString(),
+            query.getColumn(6).getString(),
+            query.getColumn(7).getDouble(),
+            query.getColumn(8).getDouble(),
+            query.getColumn(9).getDouble(),
+            query.getColumn(10).getDouble()
+        );
+        if (!vehicle) {
+            throw runtime_error("Unknown vehicle category in database.");
+        }
+        rentalSystem.addVehicle(std::move(vehicle));
+    }
+}
+
 crow::json::wvalue reservationJson(SQLite::Statement& query) {
     crow::json::wvalue result;
     result["id"] = query.getColumn(0).getInt();
@@ -190,6 +222,17 @@ int main() {
 
     //Call constructor in Authentication.cpp via Authentication.h
     AuthenticationService authenticationService(databasePath);
+
+    // Create a RentalSystem object
+    RentalSystem rentalSystem;
+    try {
+        // load the vehicles - run the helper function
+        loadVehiclesFromDatabase(rentalSystem);
+    } catch (const exception& e) {
+        // Catch the error if occur
+        cerr << "Vehicle loading failed: " << e.what() << endl;
+        return 1;
+    }
 
     // Define Crow route for the website's root URL
     CROW_ROUTE(app, "/")([]() {
@@ -383,8 +426,9 @@ int main() {
         }
     });
 
+    // Reserve vehicle (rent vehicle)
     CROW_ROUTE(app, "/api/reservations").methods(crow::HTTPMethod::POST)
-    ([](const crow::request& request) {
+    ([&rentalSystem](const crow::request& request) {
         if (!isAuthenticated(request)) {
             return jsonMessage(401, "Authentication is required.");
         }
@@ -399,41 +443,30 @@ int main() {
         const string vehicleId = body["vehicle_id"].s();
         const string startDate = body["start_date"].s();
         const string endDate = body["end_date"].s();
+
+        // Call Reservation Member Function to validate start and end date.
         if (!Reservation::validDateRange(startDate, endDate)) {
             return jsonMessage(400, "Use valid dates in YYYY-MM-DD format.");
         }
 
         try {
             SQLite::Database database(databasePath, SQLite::OPEN_READWRITE);
-            SQLite::Statement vehicleQuery(
-                database,
-                "SELECT vehicle_id, license_plate, brand, model, description, vehicle_type, "
-                "status, mileage, daily_rate, security_deposit, insurance_rate "
-                "FROM Vehicles WHERE vehicle_id = ?"
-            );
-            vehicleQuery.bind(1, vehicleId);
-            if (!vehicleQuery.executeStep()) {
+
+            // Declares a new pointer variable named vehicle and stores the address of the vehicle found by findVehicle()
+            // Select the vehicle from in-memory vehicleMap_ where id = vehicleId
+            // It allow us to access the field such as vehicle->field_name
+            Vehicle* vehicle = rentalSystem.findVehicle(vehicleId);
+            if (!vehicle) {
                 return jsonMessage(404, "Vehicle not found.");
             }
-
-            auto vehicle = makeVehicle(
-                vehicleQuery.getColumn(5).getString(),
-                vehicleQuery.getColumn(0).getString(),
-                vehicleQuery.getColumn(1).getString(),
-                vehicleQuery.getColumn(2).getString(),
-                vehicleQuery.getColumn(3).getString(),
-                vehicleQuery.getColumn(4).getString(),
-                vehicleQuery.getColumn(6).getString(),
-                vehicleQuery.getColumn(7).getDouble(),
-                vehicleQuery.getColumn(8).getDouble(),
-                vehicleQuery.getColumn(9).getDouble(),
-                vehicleQuery.getColumn(10).getDouble()
-            );
             const int customerId = customerIdFromRequest(request);
-            if (!vehicle || !vehicle->rentVehicle(to_string(customerId))) {
+
+            // Attempt to rent the vehicle through RentalSystem
+            if (!rentalSystem.rentVehicle(vehicleId, to_string(customerId))) {
                 return jsonMessage(409, "This vehicle is not available.");
             }
 
+            // Constructor Call
             Reservation reservation(
                 "", vehicleId, customerId, startDate, endDate, vehicle->dailyRate());
             SQLite::Statement insert(
@@ -462,9 +495,10 @@ int main() {
         }
     });
 
+    // Checkout vehicle (return vehicle)
     CROW_ROUTE(app, "/api/reservations/<int>/checkout")
         .methods(crow::HTTPMethod::POST)
-    ([](const crow::request& request, int reservationId) {
+    ([&rentalSystem](const crow::request& request, int reservationId) {
         if (!isAuthenticated(request)) {
             return jsonMessage(401, "Authentication is required.");
         }
@@ -477,6 +511,7 @@ int main() {
         const double returnedMileage = body["returned_mileage"].d();
 
         try {
+            // Select the vehicle to check exist or not before return it
             SQLite::Database database(databasePath, SQLite::OPEN_READWRITE);
             SQLite::Statement reservationQuery(
                 database,
@@ -484,46 +519,35 @@ int main() {
                 "WHERE reservation_id = ?"
             );
             reservationQuery.bind(1, reservationId);
+
+            // Return error message if not found
             if (!reservationQuery.executeStep()) {
                 return jsonMessage(404, "Booking not found.");
             }
             const int ownerId = reservationQuery.getColumn(1).getInt();
+
+            // Ensure only booking owner can checkout
             if (!isAdministrator(request) && ownerId != customerIdFromRequest(request)) {
                 return jsonMessage(403, "You can only check out your own booking.");
             }
+            // Ensure it is not checkout yet
             if (reservationQuery.getColumn(2).getString() != "Confirmed") {
                 return jsonMessage(409, "This booking has already been checked out.");
             }
 
+            // Retrieve the id and store in vehicleId
             const string vehicleId = reservationQuery.getColumn(0).getString();
-            SQLite::Statement vehicleQuery(
-                database,
-                "SELECT vehicle_id, license_plate, brand, model, description, vehicle_type, "
-                "status, mileage, daily_rate, security_deposit, insurance_rate "
-                "FROM Vehicles WHERE vehicle_id = ?"
-            );
-            vehicleQuery.bind(1, vehicleId);
-            if (!vehicleQuery.executeStep()) {
+
+            // Select the vehicle from in-memory vehicleMap_ where id = vehicleId
+            Vehicle* vehicle = rentalSystem.findVehicle(vehicleId);
+            if (!vehicle) {
                 return jsonMessage(404, "Vehicle not found.");
             }
-
-            auto vehicle = makeVehicle(
-                vehicleQuery.getColumn(5).getString(),
-                vehicleQuery.getColumn(0).getString(),
-                vehicleQuery.getColumn(1).getString(),
-                vehicleQuery.getColumn(2).getString(),
-                vehicleQuery.getColumn(3).getString(),
-                vehicleQuery.getColumn(4).getString(),
-                vehicleQuery.getColumn(6).getString(),
-                vehicleQuery.getColumn(7).getDouble(),
-                vehicleQuery.getColumn(8).getDouble(),
-                vehicleQuery.getColumn(9).getDouble(),
-                vehicleQuery.getColumn(10).getDouble()
-            );
-            if (!vehicle || !vehicle->returnVehicle(returnedMileage)) {
+            if (!rentalSystem.returnVehicle(vehicleId, returnedMileage)) {
                 return jsonMessage(409, "Returned mileage must not be lower than the current mileage.");
             }
 
+            // Update status to Completed when user return vehicle
             SQLite::Statement updateReservation(
                 database,
                 "UPDATE Reservations SET status = 'Completed', checkout_date = date('now') "
@@ -532,6 +556,7 @@ int main() {
             updateReservation.bind(1, reservationId);
             updateReservation.exec();
 
+            // Update status to vehicle->status() and mileage = vehicle->mileage() where id = vehicleId
             SQLite::Statement updateVehicle(
                 database,
                 "UPDATE Vehicles SET status = ?, mileage = ? WHERE vehicle_id = ?"
@@ -576,7 +601,7 @@ int main() {
             // After get the query results, passes them into makeVehicle(...) to create a concrete polymorphic object
             // Always ensure the category is exist first (StandardCar, LuxuryCar, SUV)
             while (query.executeStep()) {
-                auto vehicle = makeVehicle(
+                auto vehicle = makeVehicle( // // creates the correct Vehicle derived class from a category string
                     query.getColumn(5).getString(),
                     query.getColumn(0).getString(),
                     query.getColumn(1).getString(),
@@ -604,7 +629,7 @@ int main() {
 
     // Add a vehicle (admin only) -- Post method to pass the data to endpoint
     CROW_ROUTE(app, "/api/vehicles").methods(crow::HTTPMethod::POST)
-    ([](const crow::request& request) {
+    ([&rentalSystem](const crow::request& request) {
 
         if (!isAuthenticated(request)) {
             return jsonMessage(401, "Authentication is required.");
@@ -654,6 +679,21 @@ int main() {
             statement.bind(9, stod(body["security_deposit"].s()));
             statement.bind(10, stod(body["insurance_rate"].s()));
             statement.exec();
+
+            // Create a C++ vehicle object of the correct category and add it to the RentalSystem's in-memory collection
+            rentalSystem.addVehicle(makeVehicle( // // creates the correct Vehicle derived class from a category string
+                category,
+                to_string(database.getLastInsertRowid()), // Get the latest id
+                body["plate"].s(),
+                body["brand"].s(),
+                body["model"].s(),
+                body["description"].s(),
+                body["status"].s(),
+                stod(body["mileage"].s()),
+                stod(body["daily_rate"].s()),
+                stod(body["security_deposit"].s()),
+                stod(body["insurance_rate"].s())
+            ));
             return jsonMessage(201, "Vehicle added successfully.");
         } catch (const invalid_argument&) {
             return jsonMessage(400, "Mileage and rates must be valid numbers.");
@@ -664,8 +704,56 @@ int main() {
         }
     });
 
+    // Maintenance - Admin use to mark the vehicle under maintenance
+    CROW_ROUTE(app, "/api/vehicles/<string>/maintenance").methods(crow::HTTPMethod::POST)
+    ([&rentalSystem](const crow::request& request, const string& vehicleId) {
+
+        // Ensure the user is admin before allow them to access
+        if (!isAuthenticated(request)) {
+            return jsonMessage(401, "Authentication is required.");
+        }
+        if (!isAdministrator(request)) {
+            return jsonMessage(403, "Administrator access is required.");
+        }
+
+        try {
+            SQLite::Database database(databasePath, SQLite::OPEN_READWRITE);
+            // Select the vehicle from in-memory vehicleMap_ where id = vehicleId
+            Vehicle* vehicle = rentalSystem.findVehicle(vehicleId);
+            if (!vehicle) {
+                return jsonMessage(404, "Vehicle not found.");
+            }
+
+            // Change the status between 'Available' and 'Under_Maintenance'
+            // It will also update the vehicle->status()
+            const bool changed = vehicle->status() == "Available"
+                ? vehicle->markUnderMaintenance()
+                : vehicle->markAvailable();
+            if (!changed) {
+                return jsonMessage(
+                    409,
+                    "Only available vehicles can be placed under maintenance, "
+                    "and only maintenance vehicles can be made available."
+                );
+            }
+
+            // SQLite to update the vehicle status to vehicle->status()
+            SQLite::Statement updateVehicle(
+                database,
+                "UPDATE Vehicles SET status = ? WHERE vehicle_id = ?"
+            );
+            updateVehicle.bind(1, vehicle->status());
+            updateVehicle.bind(2, vehicleId);
+            updateVehicle.exec();
+            return jsonMessage(200, "Vehicle status updated successfully.");
+        } catch (const SQLite::Exception&) {
+            return jsonMessage(500, "Unable to update vehicle status.");
+        }
+    });
+
+    // Update vehicle details
     CROW_ROUTE(app, "/api/vehicles/<string>").methods(crow::HTTPMethod::PUT)
-    ([](const crow::request& request, const string& vehicleId) {
+    ([&rentalSystem](const crow::request& request, const string& vehicleId) {
         if (!isAuthenticated(request)) {
             return jsonMessage(401, "Authentication is required.");
         }
@@ -683,6 +771,7 @@ int main() {
 
         const string category = body["category"].s();
         const string status = body["status"].s();
+        // Some validation check
         if (!makeVehicle(category, "", "", "", "", "", "", 0, 0, 0, 0)) {
             return jsonMessage(400, "Unknown vehicle category.");
         }
@@ -692,6 +781,61 @@ int main() {
 
         try {
             SQLite::Database database(databasePath, SQLite::OPEN_READWRITE);
+
+            // Select the edited vehicle first
+            SQLite::Statement currentVehicleQuery(
+                database,
+                "SELECT vehicle_id, license_plate, brand, model, description, vehicle_type, "
+                "status, mileage, daily_rate, security_deposit, insurance_rate "
+                "FROM Vehicles WHERE vehicle_id = ?"
+            );
+            currentVehicleQuery.bind(1, vehicleId);
+
+            // Error message if not found
+            if (!currentVehicleQuery.executeStep()) {
+                return jsonMessage(404, "Vehicle not found.");
+            }
+
+            // Validate the category with derived class
+            auto currentVehicle = makeVehicle( // creates the correct Vehicle derived class from a category string
+                currentVehicleQuery.getColumn(5).getString(),
+                currentVehicleQuery.getColumn(0).getString(),
+                currentVehicleQuery.getColumn(1).getString(),
+                currentVehicleQuery.getColumn(2).getString(),
+                currentVehicleQuery.getColumn(3).getString(),
+                currentVehicleQuery.getColumn(4).getString(),
+                currentVehicleQuery.getColumn(6).getString(),
+                currentVehicleQuery.getColumn(7).getDouble(),
+                currentVehicleQuery.getColumn(8).getDouble(),
+                currentVehicleQuery.getColumn(9).getDouble(),
+                currentVehicleQuery.getColumn(10).getDouble()
+            );
+            if (!currentVehicle) {
+                return jsonMessage(500, "Unable to load vehicle.");
+            }
+
+            // Define the statusChangeValid and reuse the function to check
+            // Validate whether a vehicle's status can be changed to the status requested
+            bool statusChangeValid = true;
+            if (status != currentVehicle->status()) {
+                if (status == "Under_Maintenance") {
+                    statusChangeValid = currentVehicle->markUnderMaintenance();
+                } else if (status == "Available"
+                    && currentVehicle->status() == "Under_Maintenance") {
+                    statusChangeValid = currentVehicle->markAvailable();
+                }
+            }
+
+            // If before value is 'Rented', then return error
+            if (!statusChangeValid) {
+                return jsonMessage(
+                    409,
+                    "A vehicle can only be marked under maintenance when available, "
+                    "and only maintenance vehicles can be marked available."
+                );
+            }
+
+            // Sqlite update the vehicle details
             SQLite::Statement statement(
                 database,
                 "UPDATE Vehicles SET license_plate = ?, brand = ?, model = ?, description = ?, "
@@ -711,9 +855,26 @@ int main() {
             statement.bind(11, vehicleId);
             statement.exec();
 
+            // If zero records been updated, then return vehicle not found
             if (database.getTotalChanges() == 0) {
                 return jsonMessage(404, "Vehicle not found.");
             }
+
+            // Add the update vehicle details into the in-memory vehicleMap_
+            // It will replace rather than add new if the vehicleId is same
+            rentalSystem.addVehicle(makeVehicle(
+                category,
+                vehicleId,
+                body["plate"].s(),
+                body["brand"].s(),
+                body["model"].s(),
+                body["description"].s(),
+                status,
+                stod(body["mileage"].s()),
+                stod(body["daily_rate"].s()),
+                stod(body["security_deposit"].s()),
+                stod(body["insurance_rate"].s())
+            ));
             return jsonMessage(200, "Vehicle updated successfully.");
         } catch (const invalid_argument&) {
             return jsonMessage(400, "Mileage and rates must be valid numbers.");
@@ -724,8 +885,9 @@ int main() {
         }
     });
 
+    // Delete vehicle
     CROW_ROUTE(app, "/api/vehicles/<string>").methods(crow::HTTPMethod::DELETE)
-    ([](const crow::request& request, const string& vehicleId) {
+    ([&rentalSystem](const crow::request& request, const string& vehicleId) {
         if (!isAuthenticated(request)) {
             return jsonMessage(401, "Authentication is required.");
         }
@@ -734,20 +896,27 @@ int main() {
         }
 
         try {
+
+            // Delete the vehicle from sqlite database where id = vehicleId
             SQLite::Database database(databasePath, SQLite::OPEN_READWRITE);
             SQLite::Statement statement(database, "DELETE FROM Vehicles WHERE vehicle_id = ?");
             statement.bind(1, vehicleId);
             statement.exec();
 
+            // If delete failed, then vehicle not found
             if (database.getTotalChanges() == 0) {
                 return jsonMessage(404, "Vehicle not found.");
             }
+
+            // Erase the vehicle details from in-memory vehicleMap_ also
+            rentalSystem.removeVehicle(vehicleId);
             return jsonMessage(200, "Vehicle deleted successfully.");
         } catch (const SQLite::Exception&) {
             return jsonMessage(409, "This vehicle cannot be deleted because it is used by a rental record.");
         }
     });
 
+    // Register account
     CROW_ROUTE(app, "/api/register").methods(crow::HTTPMethod::POST)
     ([&authenticationService](const crow::request& req) {
         auto body = crow::json::load(req.body);

@@ -92,6 +92,13 @@ function displayVehicles(vehicles) {
             <button class="text-link button-link" type="button" onclick="editVehicle('${escapeHtml(vehicle.id)}')">Edit</button>
             <button class="text-link button-link danger-link" type="button" onclick="deleteVehicle('${escapeHtml(vehicle.id)}')">Delete</button>
           </div>
+          ${vehicle.status === 'Available' || vehicle.status === 'Under_Maintenance' ? `
+            <div class="vehicle-maintenance-action">
+              <button class="submit-button" type="button" onclick="toggleVehicleMaintenance('${escapeHtml(vehicle.id)}', '${escapeHtml(vehicle.status)}')">
+                ${vehicle.status === 'Available' ? 'Mark under maintenance' : 'Mark available'}
+              </button>
+            </div>
+          ` : ''}
           <form class="vehicle-edit-form hidden" data-vehicle-id="${escapeHtml(vehicle.id)}">
             <label>License plate<input name="plate" value="${escapeHtml(vehicle.plate)}" required></label>
             <label>Brand<input name="brand" value="${escapeHtml(vehicle.brand)}" required></label>
@@ -140,6 +147,29 @@ async function updateVehicle(event) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(Object.fromEntries(new FormData(form)))
     });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message);
+    result.textContent = data.message;
+    result.className = 'result success';
+    await loadVehicles();
+  } catch (error) {
+    result.textContent = error.message;
+    result.className = 'result error';
+  }
+}
+
+async function toggleVehicleMaintenance(vehicleId, currentStatus) {
+  const result = document.getElementById('vehicle-result');
+  const action = currentStatus === 'Available'
+    ? 'mark this vehicle under maintenance'
+    : 'mark this vehicle available';
+  if (!window.confirm(`Are you sure you want to ${action}?`)) return;
+
+  try {
+    const response = await fetch(
+      `/api/vehicles/${encodeURIComponent(vehicleId)}/maintenance`,
+      { method: 'POST' }
+    );
     const data = await response.json();
     if (!response.ok) throw new Error(data.message);
     result.textContent = data.message;
