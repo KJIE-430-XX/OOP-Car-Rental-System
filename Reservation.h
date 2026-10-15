@@ -31,6 +31,12 @@ public:
         const string& startDate,
         const string& endDate
     );
+    static string statusForDate(
+        const string& startDate,
+        const string& endDate,
+        const string& today
+    );
+    static string todayDate();
 
 private:
 

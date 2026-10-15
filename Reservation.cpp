@@ -1,6 +1,8 @@
 #include "Reservation.h"
 
 #include <ctime>
+#include <iomanip>
+#include <sstream>
 #include <utility>
 
 using namespace std;
@@ -101,4 +103,32 @@ bool Reservation::validDateRange(
 ) {
     return validDate(startDate) && validDate(endDate)
         && dateValue(endDate) >= dateValue(startDate);
+}
+
+string Reservation::statusForDate(
+    const string& startDate,
+    const string& endDate,
+    const string& today
+) {
+    if (dateValue(today) >= dateValue(endDate)) {
+        return "Completed";
+    }
+    if (dateValue(today) >= dateValue(startDate)) {
+        return "Active";
+    }
+    return "Confirmed";
+}
+
+string Reservation::todayDate() {
+    const time_t now = time(nullptr);
+    tm localTime = {};
+#ifdef _WIN32
+    localtime_s(&localTime, &now);
+#else
+    localtime_r(&now, &localTime);
+#endif
+
+    ostringstream date;
+    date << put_time(&localTime, "%Y-%m-%d");
+    return date.str();
 }

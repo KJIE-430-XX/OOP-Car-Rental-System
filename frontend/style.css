@@ -711,6 +711,17 @@ select:focus {
   background-color: red;
 }
 
+.vehicle-rented-label {
+  display: inline-flex;
+  align-items: center;
+  padding: 11px 16px;
+  color: var(--text-secondary);
+  background: var(--border);
+  font-family: Arial, sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
 .vehicle-actions .danger-link:hover {
   background-color: rgb(255, 102, 102);
 }

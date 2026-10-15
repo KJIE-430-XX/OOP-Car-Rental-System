@@ -200,6 +200,87 @@ crow::json::wvalue reservationJson(SQLite::Statement& query) {
     result["status"] = query.getColumn(5).getString();
     return result;
 }
+
+bool hasOverlappingReservation(
+    SQLite::Database& database,
+    const string& vehicleId,
+    const string& startDate,
+    const string& endDate
+) {
+    SQLite::Statement query(
+        database,
+        "SELECT 1 FROM Reservations "
+        "WHERE vehicle_id = ? "
+        "AND status != 'Completed' "
+        "AND start_date <= ? "
+        "AND end_date >= ? "
+        "LIMIT 1"
+    );
+    query.bind(1, vehicleId);
+    query.bind(2, endDate);
+    query.bind(3, startDate);
+    return query.executeStep();
+}
+
+bool hasActiveCustomerReservation(
+    SQLite::Database& database,
+    const string& vehicleId,
+    int customerId
+) {
+    SQLite::Statement query(
+        database,
+        "SELECT 1 FROM Reservations "
+        "WHERE vehicle_id = ? AND customer_id = ? "
+        "AND status IN ('Confirmed', 'Active') "
+        "LIMIT 1"
+    );
+    query.bind(1, vehicleId);
+    query.bind(2, customerId);
+    return query.executeStep();
+}
+
+void updateAutomaticReservationStatuses() {
+    SQLite::Database database(databasePath, SQLite::OPEN_READWRITE);
+    SQLite::Statement query(
+        database,
+        "SELECT reservation_id, vehicle_id, start_date, end_date "
+        "FROM Reservations WHERE status IN ('Confirmed', 'Active')"
+    );
+    const string today = Reservation::todayDate();
+
+    while (query.executeStep()) {
+        const int reservationId = query.getColumn(0).getInt();
+        const string vehicleId = query.getColumn(1).getString();
+        const string newStatus = Reservation::statusForDate(
+            query.getColumn(2).getString(),
+            query.getColumn(3).getString(),
+            today
+        );
+
+        SQLite::Statement update(
+            database,
+            "UPDATE Reservations "
+            "SET status = ?, checkout_date = CASE "
+            "WHEN ? = 'Completed' THEN ? ELSE checkout_date END "
+            "WHERE reservation_id = ?"
+        );
+        update.bind(1, newStatus);
+        update.bind(2, newStatus);
+        update.bind(3, today);
+        update.bind(4, reservationId);
+        update.exec();
+
+        if (newStatus == "Completed") {
+            SQLite::Statement releaseVehicle(
+                database,
+                "UPDATE Vehicles SET status = 'Available' "
+                "WHERE vehicle_id = ? AND status = 'Rented'"
+            );
+            releaseVehicle.bind(1, vehicleId);
+            releaseVehicle.exec();
+        }
+    }
+}
 }
 
 string readFile(const string& path) {
@@ -215,6 +296,14 @@ int main() {
     }
     catch (const exception& e) {
         cerr << "Database init failed: " << e.what() << endl;
+        return 1;
+    }
+
+    try {
+        updateAutomaticReservationStatuses();
+    } catch (const exception& e) {
+        cerr << "Automatic reservation status update failed: "
+             << e.what() << endl;
         return 1;
     }
 
@@ -461,9 +550,24 @@ int main() {
             }
             const int customerId = customerIdFromRequest(request);
 
-            // Attempt to rent the vehicle through RentalSystem
-            if (!rentalSystem.rentVehicle(vehicleId, to_string(customerId))) {
-                return jsonMessage(409, "This vehicle is not available.");
+            if (vehicle->status() == "Under_Maintenance") {
+                return jsonMessage(409, "This vehicle is under maintenance.");
+            }
+
+            if (hasActiveCustomerReservation(database, vehicleId, customerId)) {
+                return jsonMessage(
+                    409,
+                    "You already have an active rental for this vehicle."
+                );
+            }
+
+            // Reservations, rather than the current vehicle status, determine
+            // whether the requested rental period is available.
+            if (hasOverlappingReservation(database, vehicleId, startDate, endDate)) {
+                return jsonMessage(
+                    409,
+                    "This vehicle is already reserved during the requested dates."
+                );
             }
 
             // Constructor Call
@@ -481,14 +585,6 @@ int main() {
             insert.bind(4, reservation.endDate());
             insert.bind(5, reservation.totalFee());
             insert.exec();
-
-            SQLite::Statement updateVehicle(
-                database,
-                "UPDATE Vehicles SET status = ? WHERE vehicle_id = ?"
-            );
-            updateVehicle.bind(1, vehicle->status());
-            updateVehicle.bind(2, vehicleId);
-            updateVehicle.exec();
             return jsonMessage(201, "Booking confirmed.");
         } catch (const SQLite::Exception&) {
             return jsonMessage(500, "Unable to create the booking.");
@@ -542,6 +638,12 @@ int main() {
             Vehicle* vehicle = rentalSystem.findVehicle(vehicleId);
             if (!vehicle) {
                 return jsonMessage(404, "Vehicle not found.");
+            }
+            // A confirmed booking no longer changes the vehicle's global
+            // status, so make it rented only while processing its return.
+            if (vehicle->status() == "Available"
+                && !rentalSystem.rentVehicle(vehicleId, to_string(ownerId))) {
+                return jsonMessage(409, "This vehicle is not available for checkout.");
             }
             if (!rentalSystem.returnVehicle(vehicleId, returnedMileage)) {
                 return jsonMessage(409, "Returned mileage must not be lower than the current mileage.");

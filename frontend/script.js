@@ -5,6 +5,8 @@ function showResult(message, success) {
 }
 
 let administratorSession = false;
+let currentVehicles = [];
+let activeReservationVehicleIds = new Set();
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, character => ({
@@ -69,6 +71,7 @@ async function logout() {
 }
 
 function displayVehicles(vehicles) {
+    currentVehicles = vehicles;
     const list = document.getElementById('vehicle-list');
     if (!vehicles.length) {
       list.innerHTML = '';
@@ -82,9 +85,15 @@ function displayVehicles(vehicles) {
         <div><dt>Status</dt><dd>${escapeHtml(vehicle.status)}</dd></div>
         <div><dt>Current mileage</dt><dd>${Number(vehicle.mileage).toFixed(1)} km</dd></div>
         <div><dt>Daily rate</dt><dd>$${Number(vehicle.daily_rate).toFixed(2)}</dd></div></dl>
-        ${!administratorSession && vehicle.available ? `
+        ${!administratorSession && vehicle.available
+          && !activeReservationVehicleIds.has(String(vehicle.id)) ? `
           <div class="vehicle-actions">
             <button class="submit-button" type="button" onclick="bookVehicle('${escapeHtml(vehicle.id)}')">Book vehicle</button>
+          </div>
+        ` : ''}
+        ${!administratorSession && activeReservationVehicleIds.has(String(vehicle.id)) ? `
+          <div class="vehicle-actions">
+            <span class="vehicle-rented-label">Rented</span>
           </div>
         ` : ''}
         ${administratorSession ? `
@@ -201,7 +210,7 @@ async function bookVehicle(vehicleId) {
     await loadVehicles();
     await loadReservations();
   } catch (error) {
-    showReservationMessage(error.message, false);
+    showBookingError(error.message);
   }
 }
 
@@ -273,6 +282,29 @@ function showReservationMessage(message, success) {
     result.textContent = message;
     result.className = `result ${success ? 'success' : 'error'}`;
   }
+}
+
+function showBookingError(message) {
+  const modal = document.createElement('div');
+  modal.className = 'booking-modal';
+  modal.innerHTML = `
+    <section class="booking-dialog" role="alertdialog" aria-modal="true"
+      aria-labelledby="booking-error-title">
+      <h2 id="booking-error-title">Unable to book vehicle</h2>
+      <p class="booking-dialog-error">${escapeHtml(message)}</p>
+      <div class="booking-dialog-actions">
+        <button class="submit-button" type="button" data-close>Close</button>
+      </div>
+    </section>
+  `;
+  document.body.appendChild(modal);
+
+  const close = () => modal.remove();
+  modal.querySelector('[data-close]').addEventListener('click', close);
+  modal.addEventListener('click', event => {
+    if (event.target === modal) close();
+  });
+  modal.querySelector('[data-close]').focus();
 }
 
 function chooseReturnedMileage(errorMessage = '') {
@@ -351,6 +383,14 @@ async function loadReservations() {
     const response = await fetch('/api/reservations');
     const data = await response.json();
     if (!response.ok) throw new Error(data.message);
+    activeReservationVehicleIds = new Set(
+      data.reservations
+        .filter(reservation => (
+          reservation.status === 'Confirmed' || reservation.status === 'Active'
+        ))
+        .map(reservation => String(reservation.vehicle_id))
+    );
+    displayVehicles(currentVehicles);
     const list = ensureReservationList();
     list.innerHTML = '<h2>My bookings</h2>' + (
       data.reservations.length
