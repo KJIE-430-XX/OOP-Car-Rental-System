@@ -1,6 +1,9 @@
 #pragma once // Prevent redefinition of class Vehicle
 
+#include <memory>
 #include <string>
+#include <unordered_map>
+#include <vector>
 
 using namespace std;
 
@@ -29,6 +32,8 @@ public:
     const string& model() const;
     const string& description() const;
     const string& status() const;
+    const string& assignedCustomer() const;
+    bool isAvailable() const;
     double mileage() const;
     double dailyRate() const;
     double securityDeposit() const;
@@ -40,6 +45,11 @@ public:
     // Vehicle* v = new SUV(); is valid
     virtual string category() const = 0;
 
+    bool rentVehicle(const string& customerId);
+    bool returnVehicle(double returnedMileage);
+    bool markUnderMaintenance();
+    bool markAvailable();
+
 private:
     // Encapsulation: Only member function can access them
     string id_;
@@ -48,10 +58,31 @@ private:
     string model_;
     string description_;
     string status_;
+    string assignedCustomer_;
     double mileage_;
     double dailyRate_;
     double securityDeposit_;
     double insuranceRate_;
+};
+
+// Declaring the RentalSystem class
+class RentalSystem {
+public:
+
+    // Declare public member functions
+    void addVehicle(unique_ptr<Vehicle> vehicle);
+    void removeVehicle(const string& vehicleId);
+    Vehicle* findVehicle(const string& vehicleId); // Returns a raw pointer to a Vehicle
+    // vector<Vehicle*> findVehiclesByCategory(const string& category) const;
+
+    bool rentVehicle(const string& vehicleId, const string& customerId);
+    bool returnVehicle(const string& vehicleId, double returnedMileage);
+
+private:
+    // Store vehicles in an in-memory hash map
+    // unordered_map stores key-value pairs:
+    // vehicleMap_ is the variable name
+    unordered_map<string, unique_ptr<Vehicle>> vehicleMap_; // 
 };
 
 // Derived class for Vehicle
