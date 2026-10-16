@@ -105,6 +105,7 @@ bool Reservation::validDateRange(
         && dateValue(endDate) >= dateValue(startDate);
 }
 
+// Member function: Determine a reservation's status based on the current date and get today's date automatically from the computer.
 string Reservation::statusForDate(
     const string& startDate,
     const string& endDate,
@@ -119,6 +120,7 @@ string Reservation::statusForDate(
     return "Confirmed";
 }
 
+// Member Function: Automatically gets the current local date from the computer and returns it as a string in YYYY-MM-DD format.
 string Reservation::todayDate() {
     const time_t now = time(nullptr);
     tm localTime = {};

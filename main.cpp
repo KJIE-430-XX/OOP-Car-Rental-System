@@ -246,17 +246,22 @@ void updateAutomaticReservationStatuses() {
         "SELECT reservation_id, vehicle_id, start_date, end_date "
         "FROM Reservations WHERE status IN ('Confirmed', 'Active')"
     );
+
+    // Get current date as a string in YYYY-MM-DD format.
     const string today = Reservation::todayDate();
 
     while (query.executeStep()) {
         const int reservationId = query.getColumn(0).getInt();
         const string vehicleId = query.getColumn(1).getString();
+
+        // Checking status to achieve auto checkin and checkout
         const string newStatus = Reservation::statusForDate(
             query.getColumn(2).getString(),
             query.getColumn(3).getString(),
             today
         );
 
+        // Update the status to sqlite database
         SQLite::Statement update(
             database,
             "UPDATE Reservations "
@@ -300,6 +305,7 @@ int main() {
     }
 
     try {
+        // Execute the function when program run
         updateAutomaticReservationStatuses();
     } catch (const exception& e) {
         cerr << "Automatic reservation status update failed: "
