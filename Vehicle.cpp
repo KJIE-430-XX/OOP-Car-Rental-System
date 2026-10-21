@@ -1,5 +1,7 @@
 #include "Vehicle.h"
 
+#include "Reservation.h"
+#include <SQLiteCpp/SQLiteCpp.h>
 #include <utility>
 
 using namespace std;
@@ -60,8 +62,8 @@ bool Vehicle::rentVehicle(const string& customerId) {
 
 bool Vehicle::returnVehicle(double returnedMileage) {
 
-    // Check whether the vehicle is rented and the returned mileage is valid
-    if (status_ != "Rented" || returnedMileage < mileage_) {
+    // A confirmed reservation may leave the vehicle Available until checkout.
+    if (status_ == "Under_Maintenance" || returnedMileage < mileage_) {
         return false;
     }
 
@@ -129,6 +131,155 @@ Vehicle* RentalSystem::findVehicle(const string& vehicleId) {
 //     return result;
 // }
 
+// Perform the create reservation function
+RentalOperationResult RentalSystem::createReservation(
+    SQLite::Database& database,
+    const string& vehicleId,
+    int customerId,
+    const string& startDate,
+    const string& endDate,
+    Reservation& reservation
+) {
+    // Validate and return specific result such as InvalidDates
+    if (!Reservation::validDateRange(startDate, endDate)) {
+        return RentalOperationResult::InvalidDates;
+    }
+
+    Vehicle* vehicle = findVehicle(vehicleId);
+    if (!vehicle) {
+        return RentalOperationResult::NotFound;
+    }
+    if (vehicle->status() == "Under_Maintenance") {
+        return RentalOperationResult::UnderMaintenance;
+    }
+
+    // Check whether current user already book the vehicle A already
+    SQLite::Statement activeReservation(
+        database,
+        "SELECT 1 FROM Reservations "
+        "WHERE vehicle_id = ? AND customer_id = ? "
+        "AND status IN ('Confirmed', 'Active') LIMIT 1"
+    );
+    activeReservation.bind(1, vehicleId);
+    activeReservation.bind(2, customerId);
+    if (activeReservation.executeStep()) {
+        return RentalOperationResult::DuplicateReservation;
+    }
+
+    // If found got overlapping reseravation or not
+    SQLite::Statement overlappingReservation(
+        database,
+        "SELECT 1 FROM Reservations "
+        "WHERE vehicle_id = ? AND status != 'Completed' "
+        "AND start_date <= ? AND end_date >= ? LIMIT 1"
+    );
+    overlappingReservation.bind(1, vehicleId);
+    overlappingReservation.bind(2, endDate);
+    overlappingReservation.bind(3, startDate);
+    if (overlappingReservation.executeStep()) {
+        return RentalOperationResult::DateUnavailable;
+    }
+
+    // Create reservation if above validations all passed.
+    // Call constructor and related member-function to calculate the total fee
+    reservation = Reservation(
+        "", vehicleId, customerId, startDate, endDate, *vehicle);
+    SQLite::Transaction transaction(database);
+    SQLite::Statement insert(
+        database,
+        "INSERT INTO Reservations "
+        "(customer_id, vehicle_id, start_date, end_date, total_fee, status) "
+        "VALUES (?, ?, ?, ?, ?, 'Confirmed')"
+    );
+    insert.bind(1, customerId);
+    insert.bind(2, vehicleId);
+    insert.bind(3, reservation.startDate());
+    insert.bind(4, reservation.endDate());
+    insert.bind(5, reservation.totalFee());
+    insert.exec();
+    transaction.commit();
+
+    // Return success message
+    return RentalOperationResult::Success;
+}
+
+// Perform the checkout vehicle function
+RentalOperationResult RentalSystem::checkoutVehicle(
+    SQLite::Database& database,
+    int reservationId,
+    double returnedMileage,
+    int customerId,
+    bool administrator
+) {
+    // Check the reservation has exist or not before checkout
+    SQLite::Statement reservationQuery(
+        database,
+        "SELECT vehicle_id, customer_id, status FROM Reservations "
+        "WHERE reservation_id = ?"
+    );
+    reservationQuery.bind(1, reservationId);
+    if (!reservationQuery.executeStep()) {
+        return RentalOperationResult::NotFound;
+    }
+    // Only admin or owner can checkout the vehicle
+    if (!administrator && reservationQuery.getColumn(1).getInt() != customerId) {
+        return RentalOperationResult::Unauthorized;
+    }
+    const string reservationStatus = reservationQuery.getColumn(2).getString();
+    if (reservationStatus != "Confirmed"
+        && reservationStatus != "Active"
+        && reservationStatus != "Overdue") {
+        return RentalOperationResult::AlreadyCompleted;
+    }
+
+
+    // Check the vehicle has exist or not from in-memory hash map
+    const string vehicleId = reservationQuery.getColumn(0).getString();
+    Vehicle* vehicle = findVehicle(vehicleId);
+    if (!vehicle) {
+        return RentalOperationResult::NotFound;
+    }
+    // Ensure the mileage is not less than original mileage
+    if (returnedMileage < vehicle->mileage()
+        || vehicle->status() == "Under_Maintenance") {
+        return RentalOperationResult::InvalidMileage;
+    }
+
+    // Update the vehicle status back to 'Available'
+    SQLite::Transaction transaction(database);
+    SQLite::Statement updateVehicle(
+        database,
+        "UPDATE Vehicles SET status = 'Available', mileage = ? WHERE vehicle_id = ?"
+    );
+    updateVehicle.bind(1, returnedMileage);
+    updateVehicle.bind(2, vehicleId);
+    updateVehicle.exec();
+
+    // Update the reservation status to complete and checkout date is now
+    SQLite::Statement updateReservation(
+        database,
+        "UPDATE Reservations SET status = 'Completed', checkout_date = date('now') "
+        "WHERE reservation_id = ? AND status IN ('Confirmed', 'Active', 'Overdue')"
+    );
+    updateReservation.bind(1, reservationId);
+    updateReservation.exec();
+
+    // Retrieve the updated row, if not return, then system return AlreadyCompleted
+    SQLite::Statement changedRows(database, "SELECT changes()");
+    if (!changedRows.executeStep() || changedRows.getColumn(0).getInt() != 1) {
+        return RentalOperationResult::AlreadyCompleted;
+    }
+
+    if (!vehicle->returnVehicle(returnedMileage)) {
+        return RentalOperationResult::InvalidMileage;
+    }
+
+    // Confirms the transaction and commits its changes.
+    transaction.commit();
+    // Return Success Message
+    return RentalOperationResult::Success;
+}
+
 bool RentalSystem::rentVehicle(const string& vehicleId, const string& customerId) {
 
     // Find the vehicle using its ID
@@ -151,9 +302,102 @@ bool RentalSystem::returnVehicle(const string& vehicleId, double returnedMileage
     return vehicle != nullptr && vehicle->returnVehicle(returnedMileage);
 }
 
+// Perform rent a vehicle
+bool RentalSystem::rentVehicle(
+    SQLite::Database& database,
+    const string& vehicleId,
+    const string& customerId
+) {
+    // Find the vehicle from in-memory hash map
+    Vehicle* vehicle = findVehicle(vehicleId);
+    if (!vehicle || !vehicle->isAvailable() || customerId.empty()) {
+        return false;
+    }
+
+    SQLite::Transaction transaction(database);
+    // Update the vehicle into 'Rented'
+    SQLite::Statement update(
+        database,
+        "UPDATE Vehicles SET status = ? WHERE vehicle_id = ?"
+    );
+    update.bind(1, "Rented");
+    update.bind(2, vehicleId);
+    update.exec();
+    if (!vehicle->rentVehicle(customerId)) {
+        return false;
+    }
+    transaction.commit();
+    return true;
+}
+
+// Perform return vehicle
+bool RentalSystem::returnVehicle(
+    SQLite::Database& database,
+    const string& vehicleId,
+    double returnedMileage
+) {
+    // Find the vehicle from in-memory hash map
+    Vehicle* vehicle = findVehicle(vehicleId);
+    if (!vehicle || vehicle->status() == "Under_Maintenance"
+        || returnedMileage < vehicle->mileage()) {
+        return false;
+    }
+
+    SQLite::Transaction transaction(database);
+    // Update vehicle into 'Available'
+    SQLite::Statement update(
+        database,
+        "UPDATE Vehicles SET status = ?, mileage = ? WHERE vehicle_id = ?"
+    );
+    update.bind(1, "Available");
+    update.bind(2, returnedMileage);
+    update.bind(3, vehicleId);
+    update.exec();
+
+    // Return false if the milegae is invalid
+    if (!vehicle->returnVehicle(returnedMileage)) {
+        return false;
+    }
+    transaction.commit();
+    return true;
+}
+
 // The derived-class overrides
 string StandardCar::category() const { return "StandardCar"; }
 
+// Override for calculateRentalFee (Standard Car)
+double StandardCar::calculateRentalFee(int rentalDays) const {
+    if (rentalDays <= 0) {
+        return 0.0;
+    }
+
+    const double baseFee = dailyRate() * rentalDays;
+    return rentalDays >= 7 ? baseFee * 0.90 : baseFee;
+}
+
 string LuxuryCar::category() const { return "LuxuryCar"; }
 
+// Override for calculateRentalFee (Luxury Car)
+double LuxuryCar::calculateRentalFee(int rentalDays) const {
+    if (rentalDays <= 0) {
+        return 0.0;
+    }
+
+    return dailyRate() * rentalDays
+        + securityDeposit()
+        + insuranceRate() * rentalDays;
+}
+
 string SUV::category() const { return "SUV"; }
+
+// Override for calculateRentalFee (SUV)
+double SUV::calculateRentalFee(int rentalDays) const {
+    if (rentalDays <= 0) {
+        return 0.0;
+    }
+
+    const double baseFee = dailyRate() * rentalDays;
+
+    // If rental day larger than 7 days, then discount 15%
+    return rentalDays >= 7 ? baseFee * 0.85 : baseFee;
+}

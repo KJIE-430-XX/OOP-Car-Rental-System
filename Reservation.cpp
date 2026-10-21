@@ -7,6 +7,9 @@
 
 using namespace std;
 
+Reservation::Reservation()
+    : customerId_(0), totalFee_(0.0) {}
+
 // The constructor - std::move allows us to move the parameter into the Reservation object efficiently, so the data remains in the object after the constructor finishes.
 Reservation::Reservation(
     string reservationId,
@@ -14,13 +17,13 @@ Reservation::Reservation(
     int customerId,
     string startDate,
     string endDate,
-    double dailyRate
+    const Vehicle& vehicle
 ) : reservationId_(std::move(reservationId)),
     vehicleId_(std::move(vehicleId)),
     customerId_(customerId),
     startDate_(std::move(startDate)),
     endDate_(std::move(endDate)),
-    totalFee_(daysBetween(startDate_, endDate_) * dailyRate) {}
+    totalFee_(vehicle.calculateRentalFee(daysBetween(startDate_, endDate_))) {}
 
 // Getter - Use this member function to return private data, so we can use Reservation.id (function call) to access them
 const string& Reservation::id() const { return reservationId_; }
@@ -111,10 +114,10 @@ string Reservation::statusForDate(
     const string& endDate,
     const string& today
 ) {
-    if (dateValue(today) >= dateValue(endDate)) {
-        return "Completed";
-    }
     if (dateValue(today) >= dateValue(startDate)) {
+        if (dateValue(today) >= dateValue(endDate)) {
+            return "Overdue";
+        }
         return "Active";
     }
     return "Confirmed";
