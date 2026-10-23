@@ -14,6 +14,19 @@ function escapeHtml(value) {
   }[character]));
 }
 
+function updateLuxuryPricingFields(form) {
+  const category = form.elements.category;
+  const pricingFields = form.querySelector('[data-luxury-pricing-fields]');
+  if (!category || !pricingFields) return;
+
+  const isLuxury = category.value === 'LuxuryCar';
+  pricingFields.classList.toggle('hidden', !isLuxury);
+  pricingFields.querySelectorAll('input').forEach(input => {
+    input.required = isLuxury;
+    if (!isLuxury && !input.value) input.value = '0';
+  });
+}
+
 async function login(event) {
   event.preventDefault();
 
@@ -125,8 +138,10 @@ function displayVehicles(vehicles) {
             </select></label>
             <label>Mileage<input name="mileage" type="number" min="0" step="0.1" value="${escapeHtml(vehicle.mileage)}" required></label>
             <label>Daily rate<input name="daily_rate" type="number" min="0" step="0.01" value="${escapeHtml(vehicle.daily_rate)}" required></label>
-            <label>Security deposit<input name="security_deposit" type="number" min="0" step="0.01" value="${escapeHtml(vehicle.security_deposit)}" required></label>
-            <label>Insurance rate<input name="insurance_rate" type="number" min="0" step="0.01" value="${escapeHtml(vehicle.insurance_rate)}" required></label>
+            <div data-luxury-pricing-fields>
+              <label>Security deposit<input name="security_deposit" type="number" min="0" step="0.01" value="${escapeHtml(vehicle.security_deposit)}" placeholder="e.g. 500.00"></label>
+              <label>Insurance rate<input name="insurance_rate" type="number" min="0" step="0.01" value="${escapeHtml(vehicle.insurance_rate)}" placeholder="e.g. 20.00"></label>
+            </div>
             <div><button class="submit-button" type="submit">Save changes</button>
               <button class="text-link button-link" type="button" onclick="editVehicle('${escapeHtml(vehicle.id)}')">Cancel</button></div>
           </form>
@@ -135,6 +150,8 @@ function displayVehicles(vehicles) {
     `).join('');
 
     list.querySelectorAll('.vehicle-edit-form').forEach(form => {
+      updateLuxuryPricingFields(form);
+      form.elements.category.addEventListener('change', () => updateLuxuryPricingFields(form));
       form.addEventListener('submit', updateVehicle);
     });
 }
@@ -387,6 +404,7 @@ async function loadReservations() {
       data.reservations
         .filter(reservation => (
           reservation.status === 'Confirmed' || reservation.status === 'Active'
+            || reservation.status === 'Overdue'
         ))
         .map(reservation => String(reservation.vehicle_id))
     );
@@ -402,7 +420,7 @@ async function loadReservations() {
               <span>$${Number(reservation.total_fee).toFixed(2)}</span>
               <span>${escapeHtml(reservation.status)}</span>
             </a>
-            ${reservation.status === 'Confirmed'
+            ${reservation.status === 'Active' || reservation.status === 'Overdue'
               ? `<button class="text-link button-link" type="button" onclick="checkoutReservation(${reservation.id})">Check out</button>`
               : ''}
           </article>
@@ -444,7 +462,7 @@ async function loadReservationDetails() {
           ? `<div><dt>Checkout date</dt><dd>${escapeHtml(reservation.checkout_date)}</dd></div>`
           : ''}
       </dl>
-      ${reservation.status === 'Confirmed'
+      ${reservation.status === 'Active' || reservation.status === 'Overdue'
         ? `<button class="submit-button" type="button" onclick="checkoutReservationFromDetails(${reservation.id})">Check out vehicle</button>`
         : ''}
     `;
@@ -519,6 +537,10 @@ async function addVehicle(event) {
     const result = document.getElementById('vehicle-result') || document.getElementById('result');
     try {
       const fields = Object.fromEntries(new FormData(form));
+      if (fields.category !== 'LuxuryCar') {
+        fields.security_deposit = '0';
+        fields.insurance_rate = '0';
+      }
       const response = await fetch('/api/vehicles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -535,6 +557,7 @@ async function addVehicle(event) {
       result.className = `result ${response.ok ? 'success' : 'error'}`;
       if (response.ok) {
         form.reset();
+        updateLuxuryPricingFields(form);
         form.classList.add('hidden');
       }
     } catch (error) {
@@ -567,6 +590,8 @@ async function initializeAdminControls() {
   }
   if (form) {
     form.classList.remove('hidden');
+    updateLuxuryPricingFields(form);
+    form.elements.category.addEventListener('change', () => updateLuxuryPricingFields(form));
     form.addEventListener('submit', addVehicle);
   }
 }

@@ -201,50 +201,13 @@ crow::json::wvalue reservationJson(SQLite::Statement& query) {
     return result;
 }
 
-bool hasOverlappingReservation(
-    SQLite::Database& database,
-    const string& vehicleId,
-    const string& startDate,
-    const string& endDate
-) {
-    SQLite::Statement query(
-        database,
-        "SELECT 1 FROM Reservations "
-        "WHERE vehicle_id = ? "
-        "AND status != 'Completed' "
-        "AND start_date <= ? "
-        "AND end_date >= ? "
-        "LIMIT 1"
-    );
-    query.bind(1, vehicleId);
-    query.bind(2, endDate);
-    query.bind(3, startDate);
-    return query.executeStep();
-}
-
-bool hasActiveCustomerReservation(
-    SQLite::Database& database,
-    const string& vehicleId,
-    int customerId
-) {
-    SQLite::Statement query(
-        database,
-        "SELECT 1 FROM Reservations "
-        "WHERE vehicle_id = ? AND customer_id = ? "
-        "AND status IN ('Confirmed', 'Active') "
-        "LIMIT 1"
-    );
-    query.bind(1, vehicleId);
-    query.bind(2, customerId);
-    return query.executeStep();
-}
-
 void updateAutomaticReservationStatuses() {
     SQLite::Database database(databasePath, SQLite::OPEN_READWRITE);
+    SQLite::Transaction transaction(database);
     SQLite::Statement query(
         database,
         "SELECT reservation_id, vehicle_id, start_date, end_date "
-        "FROM Reservations WHERE status IN ('Confirmed', 'Active')"
+        "FROM Reservations WHERE status IN ('Confirmed', 'Active', 'Overdue')"
     );
 
     // Get current date as a string in YYYY-MM-DD format.
@@ -254,37 +217,34 @@ void updateAutomaticReservationStatuses() {
         const int reservationId = query.getColumn(0).getInt();
         const string vehicleId = query.getColumn(1).getString();
 
-        // Checking status to achieve auto checkin and checkout
+        // Automatically check in at the start date and mark late returns overdue.
         const string newStatus = Reservation::statusForDate(
             query.getColumn(2).getString(),
             query.getColumn(3).getString(),
             today
         );
 
-        // Update the status to sqlite database
-        SQLite::Statement update(
+        SQLite::Statement updateReservation(
             database,
-            "UPDATE Reservations "
-            "SET status = ?, checkout_date = CASE "
-            "WHEN ? = 'Completed' THEN ? ELSE checkout_date END "
-            "WHERE reservation_id = ?"
+            "UPDATE Reservations SET status = ? "
+            "WHERE reservation_id = ? AND status != ?"
         );
-        update.bind(1, newStatus);
-        update.bind(2, newStatus);
-        update.bind(3, today);
-        update.bind(4, reservationId);
-        update.exec();
+        updateReservation.bind(1, newStatus);
+        updateReservation.bind(2, reservationId);
+        updateReservation.bind(3, newStatus);
+        updateReservation.exec();
 
-        if (newStatus == "Completed") {
-            SQLite::Statement releaseVehicle(
+        if (newStatus == "Active" || newStatus == "Overdue") {
+            SQLite::Statement rentVehicle(
                 database,
-                "UPDATE Vehicles SET status = 'Available' "
-                "WHERE vehicle_id = ? AND status = 'Rented'"
+                "UPDATE Vehicles SET status = 'Rented' "
+                "WHERE vehicle_id = ? AND status = 'Available'"
             );
-            releaseVehicle.bind(1, vehicleId);
-            releaseVehicle.exec();
+            rentVehicle.bind(1, vehicleId);
+            rentVehicle.exec();
         }
     }
+    transaction.commit();
 }
 }
 
@@ -305,7 +265,7 @@ int main() {
     }
 
     try {
-        // Execute the function when program run
+        // Perform Automation Check-in or Overdue detection before API
         updateAutomaticReservationStatuses();
     } catch (const exception& e) {
         cerr << "Automatic reservation status update failed: "
@@ -438,6 +398,7 @@ int main() {
         return crow::response(200, responseBody);
     });
 
+    // Retrieve reservation record from database
     CROW_ROUTE(app, "/api/reservations").methods(crow::HTTPMethod::GET)
     ([](const crow::request& request) {
         if (!isAuthenticated(request)) {
@@ -445,6 +406,8 @@ int main() {
         }
 
         try {
+            // Perform Automation Check-in or Overdue detection before API
+            updateAutomaticReservationStatuses();
             SQLite::Database database(databasePath, SQLite::OPEN_READWRITE);
             const bool administrator = isAdministrator(request);
             SQLite::Statement query(
@@ -471,6 +434,7 @@ int main() {
         }
     });
 
+    // Retrieve reservation from database based on id
     CROW_ROUTE(app, "/api/reservations/<int>").methods(crow::HTTPMethod::GET)
     ([](const crow::request& request, int reservationId) {
         if (!isAuthenticated(request)) {
@@ -478,6 +442,8 @@ int main() {
         }
 
         try {
+            // Perform Automation Check-in or Overdue detection before API
+            updateAutomaticReservationStatuses();
             SQLite::Database database(databasePath, SQLite::OPEN_READWRITE);
             SQLite::Statement query(
                 database,
@@ -539,59 +505,34 @@ int main() {
         const string startDate = body["start_date"].s();
         const string endDate = body["end_date"].s();
 
-        // Call Reservation Member Function to validate start and end date.
-        if (!Reservation::validDateRange(startDate, endDate)) {
-            return jsonMessage(400, "Use valid dates in YYYY-MM-DD format.");
-        }
-
         try {
+            // Perform Automation Check-in or Overdue detection before API
+            updateAutomaticReservationStatuses();
             SQLite::Database database(databasePath, SQLite::OPEN_READWRITE);
-
-            // Declares a new pointer variable named vehicle and stores the address of the vehicle found by findVehicle()
-            // Select the vehicle from in-memory vehicleMap_ where id = vehicleId
-            // It allow us to access the field such as vehicle->field_name
-            Vehicle* vehicle = rentalSystem.findVehicle(vehicleId);
-            if (!vehicle) {
-                return jsonMessage(404, "Vehicle not found.");
-            }
             const int customerId = customerIdFromRequest(request);
+            Reservation reservation;
+            const RentalOperationResult result = rentalSystem.createReservation(
+                database, vehicleId, customerId, startDate, endDate, reservation);
+            switch (result) {
 
-            if (vehicle->status() == "Under_Maintenance") {
+            // Display different message based on return type
+            case RentalOperationResult::Success:
+                return jsonMessage(201, "Booking confirmed.");
+            case RentalOperationResult::InvalidDates:
+                return jsonMessage(400, "Use valid dates in YYYY-MM-DD format.");
+            case RentalOperationResult::NotFound:
+                return jsonMessage(404, "Vehicle not found.");
+            case RentalOperationResult::UnderMaintenance:
                 return jsonMessage(409, "This vehicle is under maintenance.");
-            }
-
-            if (hasActiveCustomerReservation(database, vehicleId, customerId)) {
+            case RentalOperationResult::DuplicateReservation:
                 return jsonMessage(
-                    409,
-                    "You already have an active rental for this vehicle."
-                );
-            }
-
-            // Reservations, rather than the current vehicle status, determine
-            // whether the requested rental period is available.
-            if (hasOverlappingReservation(database, vehicleId, startDate, endDate)) {
+                    409, "You already have an active rental for this vehicle.");
+            case RentalOperationResult::DateUnavailable:
                 return jsonMessage(
-                    409,
-                    "This vehicle is already reserved during the requested dates."
-                );
+                    409, "This vehicle is already reserved during the requested dates.");
+            default:
+                return jsonMessage(500, "Unable to create the booking.");
             }
-
-            // Constructor Call
-            Reservation reservation(
-                "", vehicleId, customerId, startDate, endDate, vehicle->dailyRate());
-            SQLite::Statement insert(
-                database,
-                "INSERT INTO Reservations "
-                "(customer_id, vehicle_id, start_date, end_date, total_fee, status) "
-                "VALUES (?, ?, ?, ?, ?, 'Confirmed')"
-            );
-            insert.bind(1, customerId);
-            insert.bind(2, vehicleId);
-            insert.bind(3, reservation.startDate());
-            insert.bind(4, reservation.endDate());
-            insert.bind(5, reservation.totalFee());
-            insert.exec();
-            return jsonMessage(201, "Booking confirmed.");
         } catch (const SQLite::Exception&) {
             return jsonMessage(500, "Unable to create the booking.");
         }
@@ -613,67 +554,30 @@ int main() {
         const double returnedMileage = body["returned_mileage"].d();
 
         try {
-            // Select the vehicle to check exist or not before return it
+            // Perform Automation Check-in or Overdue detection before API
+            updateAutomaticReservationStatuses();
             SQLite::Database database(databasePath, SQLite::OPEN_READWRITE);
-            SQLite::Statement reservationQuery(
+            const RentalOperationResult result = rentalSystem.checkoutVehicle(
                 database,
-                "SELECT vehicle_id, customer_id, status FROM Reservations "
-                "WHERE reservation_id = ?"
-            );
-            reservationQuery.bind(1, reservationId);
-
-            // Return error message if not found
-            if (!reservationQuery.executeStep()) {
-                return jsonMessage(404, "Booking not found.");
-            }
-            const int ownerId = reservationQuery.getColumn(1).getInt();
-
-            // Ensure only booking owner can checkout
-            if (!isAdministrator(request) && ownerId != customerIdFromRequest(request)) {
+                reservationId,
+                returnedMileage,
+                customerIdFromRequest(request),
+                isAdministrator(request));
+            switch (result) {
+            case RentalOperationResult::Success:
+                return jsonMessage(200, "Vehicle checked out successfully.");
+            case RentalOperationResult::NotFound:
+                return jsonMessage(404, "Booking or vehicle not found.");
+            case RentalOperationResult::Unauthorized:
                 return jsonMessage(403, "You can only check out your own booking.");
-            }
-            // Ensure it is not checkout yet
-            if (reservationQuery.getColumn(2).getString() != "Confirmed") {
+            case RentalOperationResult::AlreadyCompleted:
                 return jsonMessage(409, "This booking has already been checked out.");
+            case RentalOperationResult::InvalidMileage:
+                return jsonMessage(
+                    409, "Returned mileage must not be lower than the current mileage.");
+            default:
+                return jsonMessage(500, "Unable to complete checkout.");
             }
-
-            // Retrieve the id and store in vehicleId
-            const string vehicleId = reservationQuery.getColumn(0).getString();
-
-            // Select the vehicle from in-memory vehicleMap_ where id = vehicleId
-            Vehicle* vehicle = rentalSystem.findVehicle(vehicleId);
-            if (!vehicle) {
-                return jsonMessage(404, "Vehicle not found.");
-            }
-            // A confirmed booking no longer changes the vehicle's global
-            // status, so make it rented only while processing its return.
-            if (vehicle->status() == "Available"
-                && !rentalSystem.rentVehicle(vehicleId, to_string(ownerId))) {
-                return jsonMessage(409, "This vehicle is not available for checkout.");
-            }
-            if (!rentalSystem.returnVehicle(vehicleId, returnedMileage)) {
-                return jsonMessage(409, "Returned mileage must not be lower than the current mileage.");
-            }
-
-            // Update status to Completed when user return vehicle
-            SQLite::Statement updateReservation(
-                database,
-                "UPDATE Reservations SET status = 'Completed', checkout_date = date('now') "
-                "WHERE reservation_id = ?"
-            );
-            updateReservation.bind(1, reservationId);
-            updateReservation.exec();
-
-            // Update status to vehicle->status() and mileage = vehicle->mileage() where id = vehicleId
-            SQLite::Statement updateVehicle(
-                database,
-                "UPDATE Vehicles SET status = ?, mileage = ? WHERE vehicle_id = ?"
-            );
-            updateVehicle.bind(1, vehicle->status());
-            updateVehicle.bind(2, vehicle->mileage());
-            updateVehicle.bind(3, vehicleId);
-            updateVehicle.exec();
-            return jsonMessage(200, "Vehicle checked out successfully.");
         } catch (const SQLite::Exception&) {
             return jsonMessage(500, "Unable to complete checkout.");
         }
@@ -693,6 +597,8 @@ int main() {
         }
 
         try {
+            // Perform Automation Check-in or Overdue detection before API
+            updateAutomaticReservationStatuses();
             SQLite::Database database(databasePath, SQLite::OPEN_READWRITE);
             SQLite::Statement query(
                 database,
@@ -825,6 +731,8 @@ int main() {
         }
 
         try {
+            // Perform Automation Check-in or Overdue detection before API
+            updateAutomaticReservationStatuses();
             SQLite::Database database(databasePath, SQLite::OPEN_READWRITE);
             // Select the vehicle from in-memory vehicleMap_ where id = vehicleId
             Vehicle* vehicle = rentalSystem.findVehicle(vehicleId);

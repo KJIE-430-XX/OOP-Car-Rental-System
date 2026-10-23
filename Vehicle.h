@@ -7,6 +7,26 @@
 
 using namespace std;
 
+class Reservation;
+
+namespace SQLite {
+class Database;
+}
+
+// Use enum to define the operation results such as Success, NotFound...
+enum class RentalOperationResult {
+    Success,
+    NotFound,
+    InvalidDates,
+    UnderMaintenance,
+    DuplicateReservation,
+    DateUnavailable,
+    InvalidMileage,
+    AlreadyCompleted,
+    Unauthorized,
+    DatabaseError
+};
+
 // Base class: Vehicle
 class Vehicle {
 public:
@@ -44,6 +64,7 @@ public:
     // Vehicle v; is invalid
     // Vehicle* v = new SUV(); is valid
     virtual string category() const = 0;
+    virtual double calculateRentalFee(int rentalDays) const = 0;
 
     bool rentVehicle(const string& customerId);
     bool returnVehicle(double returnedMileage);
@@ -75,8 +96,34 @@ public:
     Vehicle* findVehicle(const string& vehicleId); // Returns a raw pointer to a Vehicle
     // vector<Vehicle*> findVehiclesByCategory(const string& category) const;
 
+    // Define the member function with specifies what kind of result the function returns
+    RentalOperationResult createReservation(
+        SQLite::Database& database,
+        const string& vehicleId,
+        int customerId,
+        const string& startDate,
+        const string& endDate,
+        Reservation& reservation
+    );
+    RentalOperationResult checkoutVehicle(
+        SQLite::Database& database,
+        int reservationId,
+        double returnedMileage,
+        int customerId,
+        bool administrator
+    );
     bool rentVehicle(const string& vehicleId, const string& customerId);
     bool returnVehicle(const string& vehicleId, double returnedMileage);
+    bool rentVehicle(
+        SQLite::Database& database,
+        const string& vehicleId,
+        const string& customerId
+    );
+    bool returnVehicle(
+        SQLite::Database& database,
+        const string& vehicleId,
+        double returnedMileage
+    );
 
 private:
     // Store vehicles in an in-memory hash map
@@ -93,16 +140,19 @@ public:
     // It pulls all of Vehicle's constructors into StandardCar
     using Vehicle::Vehicle;
     string category() const override;
+    double calculateRentalFee(int rentalDays) const override;
 };
 
 class LuxuryCar final : public Vehicle {
 public:
     using Vehicle::Vehicle;
     string category() const override;
+    double calculateRentalFee(int rentalDays) const override;
 };
 
 class SUV final : public Vehicle {
 public:
     using Vehicle::Vehicle;
     string category() const override;
+    double calculateRentalFee(int rentalDays) const override;
 };

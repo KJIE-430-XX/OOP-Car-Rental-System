@@ -37,12 +37,14 @@
         </select>
         <label for="vehicle-mileage">Mileage</label>
         <input id="vehicle-mileage" name="mileage" type="number" min="0" step="0.1" required>
-        <label for="vehicle-daily-rate">Daily rate</label>
+        <label for="vehicle-daily-rate">Daily rate (e.g. 180.00 (per day))</label>
         <input id="vehicle-daily-rate" name="daily_rate" type="number" min="0" step="0.01" required>
-        <label for="vehicle-security-deposit">Security deposit</label>
-        <input id="vehicle-security-deposit" name="security_deposit" type="number" min="0" step="0.01" required>
-        <label for="vehicle-insurance-rate">Insurance rate</label>
-        <input id="vehicle-insurance-rate" name="insurance_rate" type="number" min="0" step="0.01" required>
+        <div id="luxury-pricing-fields" class="hidden" data-luxury-pricing-fields>
+          <label for="vehicle-security-deposit">Security deposit (e.g. 500.00)</label>
+          <input id="vehicle-security-deposit" name="security_deposit" type="number" min="0" step="0.01" placeholder="e.g. 500.00">
+          <label for="vehicle-insurance-rate">Insurance rate (e.g. 20.00 (per day))</label>
+          <input id="vehicle-insurance-rate" name="insurance_rate" type="number" min="0" step="0.01" placeholder="e.g. 20.00">
+        </div>
         <button class="submit-button" type="submit">Save vehicle</button>
       </form>
       <p id="vehicle-result" class="result" role="status"></p>

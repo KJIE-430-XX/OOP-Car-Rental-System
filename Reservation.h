@@ -2,21 +2,24 @@
 
 #include <string>
 
+#include "Vehicle.h"
+
 using namespace std;
 
 // Declaring the reservation class
 class Reservation {
 public:
 
+    Reservation();
+
     // Declaring the constructor
     Reservation(
-        // Parameters
         string reservationId,
         string vehicleId,
         int customerId,
         string startDate,
         string endDate,
-        double dailyRate
+        const Vehicle& vehicle
     );
 
     // Public member function declarations (Read-only references)
