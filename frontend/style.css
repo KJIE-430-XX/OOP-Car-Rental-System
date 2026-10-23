@@ -838,6 +838,77 @@ select:focus {
   font-size: 0.95rem;
 }
 
+.damage-checklist,
+.damage-report {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  font-family: Arial, sans-serif;
+}
+
+.damage-checklist h3,
+.damage-report h3 {
+  margin: 0 0 8px;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.35rem;
+  font-weight: 400;
+}
+
+.damage-checklist p {
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+}
+
+.checklist-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px 18px;
+  margin-top: 12px;
+}
+
+.checklist-section {
+  margin-top: 24px;
+}
+
+.checklist-section h4 {
+  margin: 0;
+  padding-bottom: 7px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.86rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.checklist-grid label {
+  margin: 0;
+  font-weight: 400;
+}
+
+.checklist-grid input {
+  width: auto;
+  margin-right: 6px;
+}
+
+@media (max-width: 600px) {
+  .checklist-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.damage-report ul {
+  padding-left: 20px;
+  line-height: 1.8;
+}
+
+.damage-report li strong {
+  float: right;
+}
+
+.damage-total {
+  font-size: 1.05rem;
+}
+
 .booking-modal {
   position: fixed;
   inset: 0;

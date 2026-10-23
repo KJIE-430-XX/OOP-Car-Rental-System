@@ -23,6 +23,9 @@ enum class RentalOperationResult {
     DateUnavailable,
     InvalidMileage,
     AlreadyCompleted,
+    PendingInspection,
+    PaymentRequired,
+    InvalidDamageComponent,
     Unauthorized,
     DatabaseError
 };

@@ -5,8 +5,56 @@ function showResult(message, success) {
 }
 
 let administratorSession = false;
+let currentCustomerId = 0;
 let currentVehicles = [];
 let activeReservationVehicleIds = new Set();
+const damageChecklistSections = [
+  {
+    title: 'Front Exterior',
+    components: [
+      'Front bumper', 'Front grille', 'Front bonnet / hood', 'Left headlight',
+      'Right headlight', 'Front windshield', 'Front number plate'
+    ]
+  },
+  {
+    title: 'Sides and Doors',
+    components: [
+      'Front-left door', 'Front-right door', 'Rear-left door', 'Rear-right door',
+      'Left side mirror', 'Right side mirror', 'Left side panel / fender',
+      'Right side panel / fender', 'Side skirts', 'Door handles and locks',
+      'Windows and window mechanisms', 'Side indicators and other lights'
+    ]
+  },
+  {
+    title: 'Rear Exterior',
+    components: [
+      'Rear bumper', 'Left taillight', 'Right taillight', 'Boot / trunk / tailgate',
+      'Rear windshield', 'Rear number plate'
+    ]
+  },
+  {
+    title: 'Wheels and Tyres',
+    components: [
+      'Front-left tyre and rim', 'Front-right tyre and rim',
+      'Rear-left tyre and rim', 'Rear-right tyre and rim', 'Spare tyre (if provided)'
+    ]
+  },
+  {
+    title: 'Interior',
+    components: [
+      'Dashboard', 'Steering wheel', 'Front seats', 'Rear seats', 'Seat belts',
+      'Centre console', 'Interior door panels', 'Floor mats and carpet',
+      'Roof lining', 'Boot interior'
+    ]
+  },
+  {
+    title: 'Mechanical and Other Components',
+    components: [
+      'Engine warning lights', 'Engine oil / fluid leakage',
+      'Visible engine compartment damage', 'Air conditioning', 'Windscreen wipers'
+    ]
+  }
+];
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, character => ({
@@ -420,8 +468,11 @@ async function loadReservations() {
               <span>$${Number(reservation.total_fee).toFixed(2)}</span>
               <span>${escapeHtml(reservation.status)}</span>
             </a>
-            ${reservation.status === 'Active' || reservation.status === 'Overdue'
+            ${!administratorSession && (reservation.status === 'Active' || reservation.status === 'Overdue')
               ? `<button class="text-link button-link" type="button" onclick="checkoutReservation(${reservation.id})">Check out</button>`
+              : ''}
+            ${administratorSession && reservation.status === 'Pending Inspection'
+              ? `<button class="text-link button-link" type="button" onclick="inspectReservation(${reservation.id})">Inspect vehicle</button>`
               : ''}
           </article>
         `).join('')
@@ -465,8 +516,80 @@ async function loadReservationDetails() {
       ${reservation.status === 'Active' || reservation.status === 'Overdue'
         ? `<button class="submit-button" type="button" onclick="checkoutReservationFromDetails(${reservation.id})">Check out vehicle</button>`
         : ''}
+      ${reservation.status === 'Pending Inspection' && administratorSession
+        ? `<form class="damage-checklist" onsubmit="submitInspection(event, ${reservation.id})">
+            <h3>Vehicle damage checklist</h3>
+            <p>Select every component with damage. Fees are calculated automatically.</p>
+            <div class="checklist-sections">${damageChecklistSections.map(section => `
+              <section class="checklist-section">
+                <h4>${escapeHtml(section.title)}</h4>
+                <div class="checklist-grid">${section.components.map(component => `
+                  <label><input type="checkbox" name="damage" value="${escapeHtml(component)}"> ${escapeHtml(component)}</label>
+                `).join('')}</div>
+              </section>
+            `).join('')}</div>
+            <button class="submit-button" type="submit">Submit damage report</button>
+          </form>`
+        : ''}
+      ${reservation.status === 'Awaiting Payment' && reservation.damage_items
+        ? `<section class="damage-report">
+            <h3>Damage report</h3>
+            <ul>${reservation.damage_items.map(item => `
+              <li>${escapeHtml(item.component)} <strong>$${Number(item.fee).toFixed(2)}</strong></li>
+            `).join('')}</ul>
+            <p class="damage-total">Damage fee: <strong>$${Number(reservation.damage_fee).toFixed(2)}</strong></p>
+            ${!administratorSession && reservation.customer_id === currentCustomerId
+              ? `<button class="submit-button" type="button" onclick="payDamageFee(${reservation.id})">Pay damage fee</button>`
+              : ''}
+          </section>`
+        : ''}
+      ${reservation.status === 'Completed' && reservation.damage_items && reservation.damage_items.length
+        ? `<section class="damage-report"><h3>Paid damage report</h3>
+            <ul>${reservation.damage_items.map(item => `<li>${escapeHtml(item.component)} <strong>$${Number(item.fee).toFixed(2)}</strong></li>`).join('')}</ul>
+            <p class="damage-total">Damage fee paid: <strong>$${Number(reservation.damage_fee).toFixed(2)}</strong></p>
+          </section>`
+        : ''}
     `;
   } catch (error) {
+    result.textContent = error.message;
+    result.className = 'result error';
+  }
+
+}
+
+async function inspectReservation(reservationId) {
+  window.location.href = `/reservation.html?id=${encodeURIComponent(reservationId)}`;
+}
+
+async function submitInspection(event, reservationId) {
+  event.preventDefault();
+  const damages = [...event.target.querySelectorAll('input[name="damage"]:checked')]
+    .map(input => input.value);
+  try {
+    const response = await fetch(`/api/reservations/${reservationId}/inspection`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ damages })
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message);
+    window.location.reload();
+  } catch (error) {
+    const result = document.getElementById('reservation-detail-result');
+    result.textContent = error.message;
+    result.className = 'result error';
+  }
+}
+
+async function payDamageFee(reservationId) {
+  if (!window.confirm('Confirm the dummy payment for this damage fee?')) return;
+  try {
+    const response = await fetch(`/api/reservations/${reservationId}/damage-payment`, { method: 'POST' });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message);
+    window.location.reload();
+  } catch (error) {
+    const result = document.getElementById('reservation-detail-result');
     result.textContent = error.message;
     result.className = 'result error';
   }
@@ -487,7 +610,7 @@ async function checkoutReservationFromDetails(reservationId) {
 async function checkoutReservation(reservationId) {
   try {
     if (await checkoutVehicle(reservationId)) {
-      showReservationMessage('Vehicle checked out successfully.', true);
+      showReservationMessage('Return submitted. The vehicle is pending inspection.', true);
       await loadVehicles();
       await loadReservations();
     }
@@ -573,6 +696,7 @@ async function initializeAdminControls() {
   const sessionResponse = await fetch('/api/session');
   const session = await sessionResponse.json();
   administratorSession = session.administrator;
+  currentCustomerId = Number(session.customer_id) || 0;
   if (!session.administrator) {
     if (toggle) toggle.remove();
     if (form) form.remove();
