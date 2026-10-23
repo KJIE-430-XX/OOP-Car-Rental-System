@@ -47,3 +47,17 @@ reservation `Completed`, and makes the vehicle available.
 ### Repository
 
 - **GitHub**: [https://github.com/KJIE-430-XX/OOP-Car-Rental-System.git]
+# Return inspection and damage fees
+
+Returning a vehicle records the latest mileage and changes the reservation to
+`Pending Inspection`. An administrator then opens the booking, selects damaged
+components from the checklist, and submits the report. Damage fees are
+calculated polymorphically by vehicle category:
+
+- Standard cars use the base repair estimates.
+- SUVs use a 1.15 multiplier for larger components and parts.
+- Luxury cars use a 1.50 multiplier for premium parts and labour.
+
+The customer can review each damaged component and its fee while the booking
+is `Awaiting Payment`. The dummy payment action marks the damage report paid,
+sets the reservation to `Completed`, and makes the vehicle available again.

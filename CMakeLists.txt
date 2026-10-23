@@ -43,6 +43,7 @@ add_executable(CarRentalSystem
     Authentication.cpp
     Vehicle.cpp
     Reservation.cpp
+    DamageFee.cpp
 )
 
 # Link to the Crow Library

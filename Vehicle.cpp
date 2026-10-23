@@ -245,33 +245,31 @@ RentalOperationResult RentalSystem::checkoutVehicle(
         return RentalOperationResult::InvalidMileage;
     }
 
-    // Update the vehicle status back to 'Available'
+    // Update the vehicle status to 'Pending Inspection'
     SQLite::Transaction transaction(database);
     SQLite::Statement updateVehicle(
         database,
-        "UPDATE Vehicles SET status = 'Available', mileage = ? WHERE vehicle_id = ?"
+        "UPDATE Vehicles SET status = 'Pending Inspection', mileage = ? WHERE vehicle_id = ?"
     );
     updateVehicle.bind(1, returnedMileage);
     updateVehicle.bind(2, vehicleId);
     updateVehicle.exec();
 
-    // Update the reservation status to complete and checkout date is now
+    // Update the reservation status to 'Pending Inspection' and checkout date is now
     SQLite::Statement updateReservation(
         database,
-        "UPDATE Reservations SET status = 'Completed', checkout_date = date('now') "
+        "UPDATE Reservations SET status = 'Pending Inspection', checkout_date = date('now'), "
+        "return_mileage = ? "
         "WHERE reservation_id = ? AND status IN ('Confirmed', 'Active', 'Overdue')"
     );
-    updateReservation.bind(1, reservationId);
+    updateReservation.bind(1, returnedMileage);
+    updateReservation.bind(2, reservationId);
     updateReservation.exec();
 
     // Retrieve the updated row, if not return, then system return AlreadyCompleted
     SQLite::Statement changedRows(database, "SELECT changes()");
     if (!changedRows.executeStep() || changedRows.getColumn(0).getInt() != 1) {
         return RentalOperationResult::AlreadyCompleted;
-    }
-
-    if (!vehicle->returnVehicle(returnedMileage)) {
-        return RentalOperationResult::InvalidMileage;
     }
 
     // Confirms the transaction and commits its changes.

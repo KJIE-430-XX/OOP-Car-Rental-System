@@ -14,10 +14,12 @@ link: http://localhost:18080/
 #include "crow.h"
 #include "Authentication.h"
 #include "Database.h"
+#include "DamageFee.h"
 #include "Reservation.h"
 #include "Vehicle.h"
 #include <SQLiteCpp/SQLiteCpp.h>
 #include <atomic>
+#include <cstdint>
 #include <fstream>
 #include <memory>
 #include <mutex>
@@ -55,6 +57,16 @@ crow::response jsonMessage(int statusCode, const string& message) {
     crow::json::wvalue body;
     body["message"] = message;
     return crow::response(statusCode, body);
+}
+
+// factory function: Create the correct damage fee calculator based on the vehicle category
+unique_ptr<DamageFeeCalculator> makeDamageFeeCalculator(const string& category) {
+
+    // Call the correct derived class for the category
+    if (category == "StandardCar") return make_unique<StandardCarDamageFee>();
+    if (category == "LuxuryCar") return make_unique<LuxuryCarDamageFee>();
+    if (category == "SUV") return make_unique<SUVDamageFee>();
+    return nullptr;
 }
 
 string sessionFromRequest(const crow::request& request) {
@@ -481,6 +493,35 @@ int main() {
             result["description"] = query.getColumn(11).getString();
             result["category"] = query.getColumn(12).getString();
             result["daily_rate"] = query.getColumn(13).getDouble();
+
+            // Retrieve the Vehicle Damage Report for specific reservation
+            SQLite::Statement report(
+                database,
+                "SELECT report_id, damage_fee, paid FROM Damage_reports "
+                "WHERE reservation_id = ?"
+            );
+            report.bind(1, reservationId);
+            if (report.executeStep()) {
+                result["damage_fee"] = report.getColumn(1).getDouble();
+                result["damage_paid"] = report.getColumn(2).getInt() != 0;
+                crow::json::wvalue::list items;
+                SQLite::Statement itemQuery(
+                    database,
+                    "SELECT component, fee FROM Damage_items WHERE report_id = ? "
+                    "ORDER BY item_id"
+                );
+                itemQuery.bind(1, report.getColumn(0).getInt());
+                while (itemQuery.executeStep()) {
+                    crow::json::wvalue item;
+                    item["component"] = itemQuery.getColumn(0).getString();
+                    item["fee"] = itemQuery.getColumn(1).getDouble();
+                    items.push_back(std::move(item));
+                }
+                result["damage_items"] = std::move(items);
+            } else {
+                result["damage_fee"] = 0.0;
+                result["damage_paid"] = false;
+            }
             return crow::response(200, result);
         } catch (const SQLite::Exception&) {
             return jsonMessage(500, "Unable to load booking details.");
@@ -565,13 +606,15 @@ int main() {
                 isAdministrator(request));
             switch (result) {
             case RentalOperationResult::Success:
-                return jsonMessage(200, "Vehicle checked out successfully.");
+                return jsonMessage(200, "Return submitted. The vehicle is pending inspection.");
             case RentalOperationResult::NotFound:
                 return jsonMessage(404, "Booking or vehicle not found.");
             case RentalOperationResult::Unauthorized:
                 return jsonMessage(403, "You can only check out your own booking.");
             case RentalOperationResult::AlreadyCompleted:
                 return jsonMessage(409, "This booking has already been checked out.");
+            case RentalOperationResult::PendingInspection:
+                return jsonMessage(409, "This booking is already pending inspection.");
             case RentalOperationResult::InvalidMileage:
                 return jsonMessage(
                     409, "Returned mileage must not be lower than the current mileage.");
@@ -580,6 +623,179 @@ int main() {
             }
         } catch (const SQLite::Exception&) {
             return jsonMessage(500, "Unable to complete checkout.");
+        }
+    });
+
+    // Allow administrator to inspect a returned vehicle
+    CROW_ROUTE(app, "/api/reservations/<int>/inspection")
+        .methods(crow::HTTPMethod::POST)
+    ([](const crow::request& request, int reservationId) {
+        if (!isAuthenticated(request) || !isAdministrator(request)) {
+            return jsonMessage(403, "Administrator access is required.");
+        }
+        auto body = crow::json::load(request.body);
+        if (!body || !body["damages"]
+            || body["damages"].t() != crow::json::type::List) {
+            return jsonMessage(400, "A damage checklist is required.");
+        }
+
+        try {
+            SQLite::Database database(databasePath, SQLite::OPEN_READWRITE);
+
+            // Retrieve Reservation and vehicle information
+            SQLite::Statement reservation(
+                database,
+                "SELECT r.vehicle_id, r.status, v.vehicle_type "
+                "FROM Reservations r JOIN Vehicles v ON v.vehicle_id = r.vehicle_id "
+                "WHERE r.reservation_id = ?"
+            );
+
+            // Return error message if no reservation found
+            reservation.bind(1, reservationId);
+            if (!reservation.executeStep()) {
+                return jsonMessage(404, "Booking not found.");
+            }
+
+            // Return error message if status is not "Pending Inspection"
+            if (reservation.getColumn(1).getString() != "Pending Inspection") {
+                return jsonMessage(409, "This booking is not pending inspection.");
+            }
+
+            // Use the category to call the correct function
+            auto calculator = makeDamageFeeCalculator(reservation.getColumn(2).getString());
+            if (!calculator) {
+                return jsonMessage(500, "Unable to calculate damage fees.");
+            }
+
+            // Insert the damage record into the Damage Report table (without damage_fee)
+            SQLite::Transaction transaction(database);
+            SQLite::Statement report(
+                database,
+                "INSERT INTO Damage_reports "
+                "(reservation_id, vehicle_id, returned_mileage, damage_fee, inspection_date) "
+                "SELECT ?, vehicle_id, return_mileage, 0, date('now') "
+                "FROM Reservations WHERE reservation_id = ?"
+            );
+            report.bind(1, reservationId);
+            report.bind(2, reservationId);
+            report.exec();
+            const int64_t reportId = database.getLastInsertRowid();
+            double total = 0.0;
+
+            // Retrive the damages checklist from the form
+            for (const auto& damage : body["damages"]) {
+
+                // Validate the damage
+                if (damage.t() != crow::json::type::String) {
+                    return jsonMessage(400, "Damage checklist entries must be text.");
+                }
+                const string component = damage.s();
+
+                // Call factory function to calculate the damage fee based on the category
+                const double fee = calculator->feeFor(component);
+                if (fee <= 0.0) {
+                    return jsonMessage(400, "The damage checklist contains an invalid component.");
+                }
+
+                // Insert the damage into the damage item table
+                SQLite::Statement item(
+                    database,
+                    "INSERT INTO Damage_items (report_id, component, fee) VALUES (?, ?, ?)"
+                );
+                item.bind(1, reportId);
+                item.bind(2, component);
+                item.bind(3, fee);
+                item.exec();
+
+                // Accumulate the damage total fee
+                total += fee;
+            }
+
+            // Update the total damage fee into the Damage Report table
+            SQLite::Statement updateReport(
+                database, "UPDATE Damage_reports SET damage_fee = ? WHERE report_id = ?");
+            updateReport.bind(1, total);
+            updateReport.bind(2, reportId);
+            updateReport.exec();
+
+            // Apdate the reservation from 'Pending Inspection' to 'Awaiting Payment'
+            SQLite::Statement updateReservation(
+                database,
+                "UPDATE Reservations SET status = 'Awaiting Payment' "
+                "WHERE reservation_id = ?"
+            );
+            updateReservation.bind(1, reservationId);
+            updateReservation.exec();
+            transaction.commit();
+            return jsonMessage(200, "Damage report submitted.");
+        } catch (const SQLite::Exception&) {
+            return jsonMessage(500, "Unable to submit the damage report.");
+        }
+    });
+
+    // Processes the damage fee payment and completes the vehicle return
+    CROW_ROUTE(app, "/api/reservations/<int>/damage-payment")
+        .methods(crow::HTTPMethod::POST)
+    ([&rentalSystem](const crow::request& request, int reservationId) {
+        if (!isAuthenticated(request)) {
+            return jsonMessage(401, "Authentication is required.");
+        }
+        try {
+            SQLite::Database database(databasePath, SQLite::OPEN_READWRITE);
+
+            // Retrieve the reservation
+            SQLite::Statement reservation(
+                database,
+                "SELECT customer_id, vehicle_id, status, return_mileage FROM Reservations "
+                "WHERE reservation_id = ?"
+            );
+            reservation.bind(1, reservationId);
+            if (!reservation.executeStep()) {
+                return jsonMessage(404, "Booking not found.");
+            }
+            if (reservation.getColumn(0).getInt() != customerIdFromRequest(request)) {
+                return jsonMessage(403, "You can only pay your own damage fee.");
+            }
+            if (reservation.getColumn(2).getString() != "Awaiting Payment") {
+                return jsonMessage(409, "This booking has no outstanding damage fee.");
+            }
+
+            // Update the damage report table, set the paid = 1, payment_date = today
+            SQLite::Transaction transaction(database);
+            SQLite::Statement report(
+                database,
+                "UPDATE Damage_reports SET paid = 1, payment_date = date('now') "
+                "WHERE reservation_id = ? AND paid = 0"
+            );
+            report.bind(1, reservationId);
+            report.exec();
+            if (database.getTotalChanges() != 1) {
+                return jsonMessage(409, "The damage fee has already been paid.");
+            }
+
+            // Update the reservation table, change the status from 'Awaiting Payment' to 'Completed'
+            SQLite::Statement complete(
+                database,
+                "UPDATE Reservations SET status = 'Completed' WHERE reservation_id = ?"
+            );
+            complete.bind(1, reservationId);
+            complete.exec();
+
+            // Update the vehicle back to available after user completely pay the damage fee and return the vehicle.
+            SQLite::Statement available(
+                database,
+                "UPDATE Vehicles SET status = 'Available' WHERE vehicle_id = ?"
+            );
+            available.bind(1, reservation.getColumn(1).getString());
+            available.exec();
+            transaction.commit();
+            Vehicle* vehicle = rentalSystem.findVehicle(reservation.getColumn(1).getString());
+            if (vehicle && !vehicle->returnVehicle(reservation.getColumn(3).getDouble())) {
+                return jsonMessage(500, "Payment completed but vehicle state could not be synchronized.");
+            }
+            return jsonMessage(200, "Damage fee paid. Vehicle return completed.");
+        } catch (const SQLite::Exception&) {
+            return jsonMessage(500, "Unable to complete the damage payment.");
         }
     });
 
@@ -828,6 +1044,11 @@ int main() {
             );
             if (!currentVehicle) {
                 return jsonMessage(500, "Unable to load vehicle.");
+            }
+            if (currentVehicle->status() == "Pending Inspection") {
+                return jsonMessage(
+                    409, "This vehicle cannot be edited until its return inspection is paid."
+                );
             }
 
             // Define the statusChangeValid and reuse the function to check
