@@ -61,3 +61,13 @@ calculated polymorphically by vehicle category:
 The customer can review each damaged component and its fee while the booking
 is `Awaiting Payment`. The dummy payment action marks the damage report paid,
 sets the reservation to `Completed`, and makes the vehicle available again.
+
+# Persistent maintenance history
+
+Vehicle maintenance status changes are stored in the `Maintenance_records`
+table. Each maintenance cycle records its start and end timestamps, the
+administrator who performed each transition, maintenance and completion notes,
+and a link to the previous maintenance cycle for that vehicle. Administrators
+can submit notes when changing maintenance status and view the history from
+the vehicle management page or through
+`GET /api/vehicles/<vehicle-id>/maintenance-records`.

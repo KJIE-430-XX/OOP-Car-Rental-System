@@ -73,6 +73,18 @@ public:
     bool returnVehicle(double returnedMileage);
     bool markUnderMaintenance();
     bool markAvailable();
+    bool markUnderMaintenance(
+        SQLite::Database& database,
+        int administratorId,
+        const string& administratorUsername,
+        const string& notes
+    );
+    bool markAvailable(
+        SQLite::Database& database,
+        int administratorId,
+        const string& administratorUsername,
+        const string& completionNotes
+    );
 
 private:
     // Encapsulation: Only member function can access them
