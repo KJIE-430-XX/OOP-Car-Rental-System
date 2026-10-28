@@ -78,6 +78,27 @@ void initializeDatabase(const string& databasePath) {
             FOREIGN KEY (vehicle_id) REFERENCES Vehicles(vehicle_id)
         );
 
+        CREATE TABLE IF NOT EXISTS Damage_reports (
+            report_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            reservation_id INTEGER NOT NULL UNIQUE,
+            vehicle_id INTEGER NOT NULL,
+            returned_mileage DOUBLE NOT NULL,
+            damage_fee DOUBLE NOT NULL DEFAULT 0,
+            paid BOOLEAN NOT NULL DEFAULT 0,
+            inspection_date VARCHAR(10),
+            payment_date VARCHAR(10),
+            FOREIGN KEY (reservation_id) REFERENCES Reservations(reservation_id),
+            FOREIGN KEY (vehicle_id) REFERENCES Vehicles(vehicle_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS Damage_items (
+            item_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            report_id INTEGER NOT NULL,
+            component VARCHAR(100) NOT NULL,
+            fee DOUBLE NOT NULL,
+            FOREIGN KEY (report_id) REFERENCES Damage_reports(report_id)
+        );
+
         CREATE TABLE IF NOT EXISTS Administrators (
             admin_id INTEGER PRIMARY KEY AUTOINCREMENT,
             username VARCHAR(30) NOT NULL,
@@ -103,6 +124,10 @@ void initializeDatabase(const string& databasePath) {
     }
     try {
         database.exec("ALTER TABLE Vehicles ADD COLUMN description VARCHAR(255) NOT NULL DEFAULT ''");
+    } catch (const SQLite::Exception&) {
+    }
+    try {
+        database.exec("ALTER TABLE Reservations ADD COLUMN return_mileage DOUBLE");
     } catch (const SQLite::Exception&) {
     }
 
