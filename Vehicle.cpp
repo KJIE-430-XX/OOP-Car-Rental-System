@@ -1,6 +1,7 @@
 #include "Vehicle.h"
 
 #include "Reservation.h"
+#include "OverdueFee.h"
 #include <SQLiteCpp/SQLiteCpp.h>
 #include <utility>
 
@@ -304,7 +305,7 @@ RentalOperationResult RentalSystem::checkoutVehicle(
     // Check the reservation has exist or not before checkout
     SQLite::Statement reservationQuery(
         database,
-        "SELECT vehicle_id, customer_id, status FROM Reservations "
+        "SELECT vehicle_id, customer_id, status, end_date FROM Reservations "
         "WHERE reservation_id = ?"
     );
     reservationQuery.bind(1, reservationId);
@@ -334,6 +335,20 @@ RentalOperationResult RentalSystem::checkoutVehicle(
         || vehicle->status() == "Under_Maintenance") {
         return RentalOperationResult::InvalidMileage;
     }
+    // If status = overdue, then call makeOverdueFeeCalculator based on the category to calculate the overdue fee
+    double overdueFee = 0.0;
+    if (reservationStatus == "Overdue") {
+        auto calculator = makeOverdueFeeCalculator(vehicle->category());
+        if (!calculator) {
+            return RentalOperationResult::DatabaseError;
+        }
+        overdueFee = calculator->feeFor(
+            Reservation::overdueDays(
+                reservationQuery.getColumn(3).getString(),
+                Reservation::todayDate()
+            )
+        );
+    }
 
     // Update the vehicle status to 'Pending Inspection'
     SQLite::Transaction transaction(database);
@@ -349,11 +364,12 @@ RentalOperationResult RentalSystem::checkoutVehicle(
     SQLite::Statement updateReservation(
         database,
         "UPDATE Reservations SET status = 'Pending Inspection', checkout_date = date('now'), "
-        "return_mileage = ? "
+        "return_mileage = ?, overdue_fee = ? "
         "WHERE reservation_id = ? AND status IN ('Confirmed', 'Active', 'Overdue')"
     );
     updateReservation.bind(1, returnedMileage);
-    updateReservation.bind(2, reservationId);
+    updateReservation.bind(2, overdueFee);
+    updateReservation.bind(3, reservationId);
     updateReservation.exec();
 
     // Retrieve the updated row, if not return, then system return AlreadyCompleted

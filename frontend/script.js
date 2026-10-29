@@ -571,6 +571,13 @@ async function loadReservationDetails() {
             <button class="submit-button" type="submit">Submit damage report</button>
           </form>`
         : ''}
+      ${Number(reservation.overdue_fee) > 0
+        ? `<section class="damage-report overdue-report">
+            <h3>Overdue fee</h3>
+            <p>Your vehicle was returned after the rental end date.</p>
+            <p class="damage-total">Overdue fee: <strong>$${Number(reservation.overdue_fee).toFixed(2)}</strong></p>
+          </section>`
+        : ''}
       ${reservation.status === 'Awaiting Payment' && reservation.damage_items
         ? `<section class="damage-report">
             <h3>Damage report</h3>

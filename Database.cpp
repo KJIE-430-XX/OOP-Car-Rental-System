@@ -72,6 +72,7 @@ void initializeDatabase(const string& databasePath) {
             start_date VARCHAR(10) NOT NULL,
             end_date VARCHAR(10) NOT NULL,
             total_fee DOUBLE NOT NULL,
+            overdue_fee DOUBLE NOT NULL DEFAULT 0,
             status VARCHAR(20) NOT NULL DEFAULT 'Confirmed',
             checkout_date VARCHAR(10),
             FOREIGN KEY (customer_id) REFERENCES Customers(customer_id),
@@ -145,6 +146,12 @@ void initializeDatabase(const string& databasePath) {
     }
     try {
         database.exec("ALTER TABLE Reservations ADD COLUMN return_mileage DOUBLE");
+    } catch (const SQLite::Exception&) {
+    }
+    try {
+        database.exec(
+            "ALTER TABLE Reservations ADD COLUMN overdue_fee DOUBLE NOT NULL DEFAULT 0"
+        );
     } catch (const SQLite::Exception&) {
     }
     try {

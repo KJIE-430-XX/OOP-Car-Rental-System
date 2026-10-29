@@ -475,7 +475,7 @@ int main() {
                 "SELECT r.reservation_id, r.customer_id, r.vehicle_id, "
                 "r.start_date, r.end_date, r.total_fee, r.status, "
                 "r.checkout_date, v.license_plate, v.brand, v.model, "
-                "v.description, v.vehicle_type, v.daily_rate "
+                "v.description, v.vehicle_type, v.daily_rate, r.overdue_fee "
                 "FROM Reservations r "
                 "JOIN Vehicles v ON v.vehicle_id = r.vehicle_id "
                 "WHERE r.reservation_id = ?"
@@ -506,6 +506,7 @@ int main() {
             result["description"] = query.getColumn(11).getString();
             result["category"] = query.getColumn(12).getString();
             result["daily_rate"] = query.getColumn(13).getDouble();
+            result["overdue_fee"] = query.getColumn(14).getDouble();
 
             // Retrieve the Vehicle Damage Report for specific reservation
             SQLite::Statement report(
