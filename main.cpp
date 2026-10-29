@@ -222,6 +222,7 @@ crow::json::wvalue reservationJson(SQLite::Statement& query) {
     result["end_date"] = query.getColumn(3).getString();
     result["total_fee"] = query.getColumn(4).getDouble();
     result["status"] = query.getColumn(5).getString();
+    result["overdue_fee"] = query.getColumn(6).getDouble();
     return result;
 }
 
@@ -438,9 +439,9 @@ int main() {
             SQLite::Statement query(
                 database,
                 administrator
-                    ? "SELECT reservation_id, vehicle_id, start_date, end_date, total_fee, status "
+                    ? "SELECT reservation_id, vehicle_id, start_date, end_date, total_fee, status, overdue_fee "
                       "FROM Reservations ORDER BY reservation_id DESC"
-                    : "SELECT reservation_id, vehicle_id, start_date, end_date, total_fee, status "
+                    : "SELECT reservation_id, vehicle_id, start_date, end_date, total_fee, status, overdue_fee "
                       "FROM Reservations WHERE customer_id = ? ORDER BY reservation_id DESC"
             );
             if (!administrator) {
