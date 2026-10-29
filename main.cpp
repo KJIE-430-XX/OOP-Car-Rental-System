@@ -36,6 +36,7 @@ mutex sessionsMutex;
 struct Session {
     bool administrator;
     int customerId;
+    string username;
 };
 unordered_map<string, Session> sessions;
 atomic<unsigned long> nextSessionId{1};
@@ -69,6 +70,7 @@ unique_ptr<DamageFeeCalculator> makeDamageFeeCalculator(const string& category) 
     return nullptr;
 }
 
+// Extract the session ID from the Cookie header in the HTTP request.
 string sessionFromRequest(const crow::request& request) {
     const string cookieHeader = request.get_header_value("Cookie");
     const string prefix = "session=";
@@ -82,6 +84,7 @@ string sessionFromRequest(const crow::request& request) {
         ? string::npos : valueEnd - valueStart);
 }
 
+// Check whether the user is an admin or not
 bool isAdministrator(const crow::request& request) {
     const string session = sessionFromRequest(request);
     lock_guard<mutex> lock(sessionsMutex);
@@ -96,11 +99,20 @@ bool isAuthenticated(const crow::request& request) {
     return sessions.find(session) != sessions.end();
 }
 
+// Get the customer ID from the user's session in the request.
 int customerIdFromRequest(const crow::request& request) {
     const string session = sessionFromRequest(request);
     lock_guard<mutex> lock(sessionsMutex);
     const auto found = sessions.find(session);
     return found == sessions.end() ? 0 : found->second.customerId;
+}
+
+// Get the username from the user's session in the request.
+string usernameFromRequest(const crow::request& request) {
+    const string session = sessionFromRequest(request);
+    lock_guard<mutex> lock(sessionsMutex);
+    const auto found = sessions.find(session);
+    return found == sessions.end() ? "" : found->second.username;
 }
 
 // Helper function: redirect to login page when user access is unauthorized
@@ -381,7 +393,7 @@ int main() {
             const string session = "session-" + to_string(nextSessionId++);
             {
                 lock_guard<mutex> lock(sessionsMutex);
-                sessions[session] = {result.administrator, result.customerId};
+                sessions[session] = {result.administrator, result.customerId, username};
             }
             response.set_header("Set-Cookie", "session=" + session + "; Path=/; HttpOnly");
         }
@@ -421,6 +433,7 @@ int main() {
             // Perform Automation Check-in or Overdue detection before API
             updateAutomaticReservationStatuses();
             SQLite::Database database(databasePath, SQLite::OPEN_READWRITE);
+            SQLite::Transaction transaction(database);
             const bool administrator = isAdministrator(request);
             SQLite::Statement query(
                 database,
@@ -946,10 +959,20 @@ int main() {
             return jsonMessage(403, "Administrator access is required.");
         }
 
+        auto body = crow::json::load(request.body);
+        string notes;
+        if (body && body["notes"] && body["notes"].t() != crow::json::type::String) {
+            return jsonMessage(400, "Maintenance notes must be text.");
+        }
+        if (body && body["notes"]) {
+            notes = body["notes"].s();
+        }
+
         try {
             // Perform Automation Check-in or Overdue detection before API
             updateAutomaticReservationStatuses();
             SQLite::Database database(databasePath, SQLite::OPEN_READWRITE);
+            SQLite::Transaction transaction(database);
             // Select the vehicle from in-memory vehicleMap_ where id = vehicleId
             Vehicle* vehicle = rentalSystem.findVehicle(vehicleId);
             if (!vehicle) {
@@ -959,8 +982,16 @@ int main() {
             // Change the status between 'Available' and 'Under_Maintenance'
             // It will also update the vehicle->status()
             const bool changed = vehicle->status() == "Available"
-                ? vehicle->markUnderMaintenance()
-                : vehicle->markAvailable();
+                ? vehicle->markUnderMaintenance(
+                    database,
+                    customerIdFromRequest(request),
+                    usernameFromRequest(request),
+                    notes)
+                : vehicle->markAvailable(
+                    database,
+                    customerIdFromRequest(request),
+                    usernameFromRequest(request),
+                    notes);
             if (!changed) {
                 return jsonMessage(
                     409,
@@ -969,21 +1000,68 @@ int main() {
                 );
             }
 
-            // SQLite to update the vehicle status to vehicle->status()
-            SQLite::Statement updateVehicle(
-                database,
-                "UPDATE Vehicles SET status = ? WHERE vehicle_id = ?"
-            );
-            updateVehicle.bind(1, vehicle->status());
-            updateVehicle.bind(2, vehicleId);
-            updateVehicle.exec();
+            transaction.commit();
             return jsonMessage(200, "Vehicle status updated successfully.");
         } catch (const SQLite::Exception&) {
             return jsonMessage(500, "Unable to update vehicle status.");
         }
     });
 
-    // Update vehicle details
+    // Retrieve maintenance record for the vehicle
+    CROW_ROUTE(app, "/api/vehicles/<string>/maintenance-records")
+        .methods(crow::HTTPMethod::GET)
+    ([](const crow::request& request, const string& vehicleId) {
+        if (!isAuthenticated(request)) {
+            return jsonMessage(401, "Authentication is required.");
+        }
+        if (!isAdministrator(request)) {
+            return jsonMessage(403, "Administrator access is required.");
+        }
+
+        // Query to select the maintenance records
+        try {
+            SQLite::Database database(databasePath, SQLite::OPEN_READWRITE);
+            SQLite::Statement query(
+                database,
+                "SELECT maintenance_id, started_at, ended_at, "
+                "started_by_admin_id, started_by_username, ended_by_admin_id, "
+                "ended_by_username, notes, completion_notes, previous_maintenance_id "
+                "FROM Maintenance_records WHERE vehicle_id = ? "
+                "ORDER BY maintenance_id DESC"
+            );
+            query.bind(1, vehicleId);
+
+            crow::json::wvalue::list records;
+
+            // Convert the query result into json format.
+            while (query.executeStep()) {
+                crow::json::wvalue record;
+                record["id"] = query.getColumn(0).getInt();
+                record["started_at"] = query.getColumn(1).getString();
+                record["ended_at"] = query.getColumn(2).isNull()
+                    ? "" : query.getColumn(2).getString();
+                record["started_by_admin_id"] = query.getColumn(3).getInt();
+                record["started_by_username"] = query.getColumn(4).getString();
+                record["ended_by_admin_id"] = query.getColumn(5).isNull()
+                    ? 0 : query.getColumn(5).getInt();
+                record["ended_by_username"] = query.getColumn(6).isNull()
+                    ? "" : query.getColumn(6).getString();
+                record["notes"] = query.getColumn(7).getString();
+                record["completion_notes"] = query.getColumn(8).getString();
+                record["previous_maintenance_id"] = query.getColumn(9).isNull()
+                    ? 0 : query.getColumn(9).getInt();
+                records.push_back(std::move(record));
+            }
+
+            crow::json::wvalue responseBody;
+            responseBody["records"] = std::move(records);
+            return crow::response(200, responseBody);
+        } catch (const SQLite::Exception&) {
+            return jsonMessage(500, "Unable to load maintenance records.");
+        }
+    });
+
+    // Update vehicle details (Edit)
     CROW_ROUTE(app, "/api/vehicles/<string>").methods(crow::HTTPMethod::PUT)
     ([&rentalSystem](const crow::request& request, const string& vehicleId) {
         if (!isAuthenticated(request)) {
@@ -1003,6 +1081,14 @@ int main() {
 
         const string category = body["category"].s();
         const string status = body["status"].s();
+        if (body["maintenance_notes"]
+            && body["maintenance_notes"].t() != crow::json::type::String) {
+            return jsonMessage(400, "Maintenance notes must be text.");
+        }
+        string maintenanceNotes;
+        if (body["maintenance_notes"]) {
+            maintenanceNotes = body["maintenance_notes"].s();
+        }
         // Some validation check
         if (!makeVehicle(category, "", "", "", "", "", "", 0, 0, 0, 0)) {
             return jsonMessage(400, "Unknown vehicle category.");
@@ -1013,6 +1099,7 @@ int main() {
 
         try {
             SQLite::Database database(databasePath, SQLite::OPEN_READWRITE);
+            SQLite::Transaction transaction(database);
 
             // Select the edited vehicle first
             SQLite::Statement currentVehicleQuery(
@@ -1056,10 +1143,20 @@ int main() {
             bool statusChangeValid = true;
             if (status != currentVehicle->status()) {
                 if (status == "Under_Maintenance") {
-                    statusChangeValid = currentVehicle->markUnderMaintenance();
+                    statusChangeValid = currentVehicle->markUnderMaintenance(
+                        database,
+                        // Identify which administrator performed the vehicle status change
+                        customerIdFromRequest(request),
+                        usernameFromRequest(request),
+                        maintenanceNotes);
                 } else if (status == "Available"
                     && currentVehicle->status() == "Under_Maintenance") {
-                    statusChangeValid = currentVehicle->markAvailable();
+                    statusChangeValid = currentVehicle->markAvailable(
+                        database,
+                        // Identify which administrator performed the vehicle status change
+                        customerIdFromRequest(request),
+                        usernameFromRequest(request),
+                        maintenanceNotes);
                 }
             }
 
@@ -1112,6 +1209,7 @@ int main() {
                 stod(body["security_deposit"].s()),
                 stod(body["insurance_rate"].s())
             ));
+            transaction.commit();
             return jsonMessage(200, "Vehicle updated successfully.");
         } catch (const invalid_argument&) {
             return jsonMessage(400, "Mileage and rates must be valid numbers.");

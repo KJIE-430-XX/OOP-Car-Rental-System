@@ -87,6 +87,57 @@ bool Vehicle::markUnderMaintenance() {
     return true;
 }
 
+// Overloading markUnderMaintenance function with four parameters
+bool Vehicle::markUnderMaintenance(
+    SQLite::Database& database,
+    int administratorId,
+    const string& administratorUsername,
+    const string& notes
+) {
+    // Return false if the status is "Available"
+    if (status_ != "Available") {
+        return false;
+    }
+
+    // Query to select previous maintenance record
+    // Use the previous record for forming a complete maintenance history
+    SQLite::Statement previous(
+        database,
+        "SELECT maintenance_id FROM Maintenance_records "
+        "WHERE vehicle_id = ? ORDER BY maintenance_id DESC LIMIT 1"
+    );
+    previous.bind(1, id_);
+    const bool hasPrevious = previous.executeStep();
+
+    // Query insert new maintenance record
+    SQLite::Statement record(
+        database,
+        "INSERT INTO Maintenance_records "
+        "(vehicle_id, started_by_admin_id, started_by_username, notes, previous_maintenance_id) "
+        "VALUES (?, ?, ?, ?, ?)"
+    );
+    record.bind(1, id_);
+    record.bind(2, administratorId);
+    record.bind(3, administratorUsername);
+    record.bind(4, notes);
+    if (hasPrevious) {
+        record.bind(5, previous.getColumn(0).getInt()); // Insert the previous id into the new record
+    } else {
+        record.bind(5);
+    }
+    record.exec();
+
+    // Query to update the vehicle status to Under_Maintenance
+    SQLite::Statement updateVehicle(
+        database,
+        "UPDATE Vehicles SET status = 'Under_Maintenance' WHERE vehicle_id = ?"
+    );
+    updateVehicle.bind(1, id_);
+    updateVehicle.exec();
+    status_ = "Under_Maintenance";
+    return true;
+}
+
 bool Vehicle::markAvailable() {
     // Only a vehicle under maintenance can be marked as available
     if (status_ != "Under_Maintenance") {
@@ -94,6 +145,45 @@ bool Vehicle::markAvailable() {
     }
 
     // Update the vehicle status to Available
+    status_ = "Available";
+    return true;
+}
+
+// Overloading markAvailable function with four parameters
+bool Vehicle::markAvailable(
+    SQLite::Database& database,
+    int administratorId,
+    const string& administratorUsername,
+    const string& completionNotes
+) {
+    if (status_ != "Under_Maintenance") {
+        return false;
+    }
+
+    // Update maintenance record's end date, who edit it and maintenance notes 
+    SQLite::Statement record(
+        database,
+        "UPDATE Maintenance_records "
+        "SET ended_at = datetime('now'), ended_by_admin_id = ?, ended_by_username = ?, "
+        "completion_notes = ? "
+        "WHERE vehicle_id = ? AND ended_at IS NULL"
+    );
+    record.bind(1, administratorId);
+    record.bind(2, administratorUsername);
+    record.bind(3, completionNotes);
+    record.bind(4, id_);
+    record.exec();
+    if (database.getTotalChanges() != 1) {
+        return false;
+    }
+
+    // Update vehicle status back to Available.
+    SQLite::Statement updateVehicle(
+        database,
+        "UPDATE Vehicles SET status = 'Available' WHERE vehicle_id = ?"
+    );
+    updateVehicle.bind(1, id_);
+    updateVehicle.exec();
     status_ = "Available";
     return true;
 }

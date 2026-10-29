@@ -161,6 +161,7 @@ function displayVehicles(vehicles) {
           <div class="vehicle-actions">
             <button class="text-link button-link" type="button" onclick="editVehicle('${escapeHtml(vehicle.id)}')">Edit</button>
             <button class="text-link button-link danger-link" type="button" onclick="deleteVehicle('${escapeHtml(vehicle.id)}')">Delete</button>
+            <button class="text-link button-link" type="button" onclick="viewMaintenanceHistory('${escapeHtml(vehicle.id)}')">View maintenance history</button>
           </div>
           ${vehicle.status === 'Available' || vehicle.status === 'Under_Maintenance' ? `
             <div class="vehicle-maintenance-action">
@@ -238,17 +239,56 @@ async function toggleVehicleMaintenance(vehicleId, currentStatus) {
     ? 'mark this vehicle under maintenance'
     : 'mark this vehicle available';
   if (!window.confirm(`Are you sure you want to ${action}?`)) return;
+  const prompt = currentStatus === 'Available'
+    ? 'Enter maintenance notes:'
+    : 'Enter maintenance completion notes (optional):';
+  const notes = window.prompt(prompt, '');
+  if (notes === null) return;
 
   try {
     const response = await fetch(
       `/api/vehicles/${encodeURIComponent(vehicleId)}/maintenance`,
-      { method: 'POST' }
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes })
+      }
     );
     const data = await response.json();
     if (!response.ok) throw new Error(data.message);
     result.textContent = data.message;
     result.className = 'result success';
     await loadVehicles();
+  } catch (error) {
+    result.textContent = error.message;
+    result.className = 'result error';
+  }
+}
+
+async function viewMaintenanceHistory(vehicleId) {
+  const result = document.getElementById('vehicle-result');
+  try {
+    const response = await fetch(
+      `/api/vehicles/${encodeURIComponent(vehicleId)}/maintenance-records`
+    );
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message);
+    if (!data.records.length) {
+      result.textContent = 'No maintenance records found.';
+      result.className = 'result success';
+      return;
+    }
+
+    result.textContent = data.records.map(record => {
+      const end = record.ended_at || 'Ongoing';
+      const completionNotes = record.completion_notes
+        ? ` Completion notes: ${record.completion_notes}`
+        : '';
+      return `#${record.id}: ${record.started_at} to ${end}; `
+        + `started by ${record.started_by_username}; `
+        + `${record.notes || 'No notes.'}${completionNotes}`;
+    }).join(' | ');
+    result.className = 'result success';
   } catch (error) {
     result.textContent = error.message;
     result.className = 'result error';
