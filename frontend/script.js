@@ -506,6 +506,9 @@ async function loadReservations() {
               <span>Vehicle #${escapeHtml(reservation.vehicle_id)}</span>
               <span>${escapeHtml(reservation.start_date)} to ${escapeHtml(reservation.end_date)}</span>
               <span>$${Number(reservation.total_fee).toFixed(2)}</span>
+              ${Number(reservation.overdue_fee) > 0
+                ? `<span>Overdue fee: $${Number(reservation.overdue_fee).toFixed(2)}</span>`
+                : ''}
               <span>${escapeHtml(reservation.status)}</span>
             </a>
             ${!administratorSession && (reservation.status === 'Active' || reservation.status === 'Overdue')
@@ -570,6 +573,13 @@ async function loadReservationDetails() {
             `).join('')}</div>
             <button class="submit-button" type="submit">Submit damage report</button>
           </form>`
+        : ''}
+      ${Number(reservation.overdue_fee) > 0
+        ? `<section class="damage-report overdue-report">
+            <h3>Overdue fee</h3>
+            <p>Your vehicle was returned after the rental end date.</p>
+            <p class="damage-total">Overdue fee: <strong>$${Number(reservation.overdue_fee).toFixed(2)}</strong></p>
+          </section>`
         : ''}
       ${reservation.status === 'Awaiting Payment' && reservation.damage_items
         ? `<section class="damage-report">

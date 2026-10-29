@@ -40,6 +40,7 @@ public:
         const string& today
     );
     static string todayDate();
+    static int overdueDays(const string& endDate, const string& checkoutDate);
 
 private:
 

@@ -43,28 +43,6 @@ void initializeDatabase(const string& databasePath) {
             insurance_rate FLOAT NOT NULL
         );
 
-        CREATE TABLE IF NOT EXISTS Transactions (
-            transaction_id VARCHAR(20) PRIMARY KEY,
-            customer_id INTEGER NOT NULL,
-            vehicle_id VARCHAR(20) NOT NULL,
-            rental_days INTEGER NOT NULL,
-            total_rental_fee DOUBLE NOT NULL,
-            damage_fee DOUBLE NOT NULL,
-            final_total DOUBLE NOT NULL,
-            status VARCHAR(20) NOT NULL,
-            FOREIGN KEY (customer_id) REFERENCES Customers(customer_id),
-            FOREIGN KEY (vehicle_id) REFERENCES Vehicles(vehicle_id)
-        );
-
-        CREATE TABLE IF NOT EXISTS Damage_logs (
-            log_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            vehicle_id VARCHAR(20) NOT NULL,
-            severity_score DOUBLE NOT NULL,
-            description VARCHAR(255),
-            customer_signoff BOOLEAN NOT NULL DEFAULT 0,
-            FOREIGN KEY (vehicle_id) REFERENCES Vehicles(vehicle_id)
-        );
-
         CREATE TABLE IF NOT EXISTS Reservations (
             reservation_id INTEGER PRIMARY KEY AUTOINCREMENT,
             customer_id INTEGER NOT NULL,
@@ -72,6 +50,7 @@ void initializeDatabase(const string& databasePath) {
             start_date VARCHAR(10) NOT NULL,
             end_date VARCHAR(10) NOT NULL,
             total_fee DOUBLE NOT NULL,
+            overdue_fee DOUBLE NOT NULL DEFAULT 0,
             status VARCHAR(20) NOT NULL DEFAULT 'Confirmed',
             checkout_date VARCHAR(10),
             FOREIGN KEY (customer_id) REFERENCES Customers(customer_id),
@@ -149,11 +128,21 @@ void initializeDatabase(const string& databasePath) {
     }
     try {
         database.exec(
+            "ALTER TABLE Reservations ADD COLUMN overdue_fee DOUBLE NOT NULL DEFAULT 0"
+        );
+    } catch (const SQLite::Exception&) {
+    }
+    try {
+        database.exec(
             "ALTER TABLE Maintenance_records "
             "ADD COLUMN completion_notes VARCHAR(1000) NOT NULL DEFAULT ''"
         );
     } catch (const SQLite::Exception&) {
     }
+
+    // These legacy tables are not part of the current rental workflow.
+    database.exec("DROP TABLE IF EXISTS Transactions");
+    database.exec("DROP TABLE IF EXISTS Damage_logs");
 
     bool integerVehicleId = false;
     {
@@ -194,18 +183,6 @@ void initializeDatabase(const string& databasePath) {
                 SELECT old.vehicle_id AS old_id, new.vehicle_id AS new_id
                 FROM Vehicles old
                 JOIN Vehicles_new new ON old.license_plate = new.license_plate;
-            UPDATE Transactions
-            SET vehicle_id = (
-                SELECT new_id FROM VehicleIdMap
-                WHERE old_id = Transactions.vehicle_id
-            )
-            WHERE vehicle_id IN (SELECT old_id FROM VehicleIdMap);
-            UPDATE Damage_logs
-            SET vehicle_id = (
-                SELECT new_id FROM VehicleIdMap
-                WHERE old_id = Damage_logs.vehicle_id
-            )
-            WHERE vehicle_id IN (SELECT old_id FROM VehicleIdMap);
             DROP TABLE Vehicles;
             ALTER TABLE Vehicles_new RENAME TO Vehicles;
             DROP TABLE VehicleIdMap;
