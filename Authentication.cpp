@@ -109,14 +109,13 @@ CustomerRegistrationResult AuthenticationService::registerAccount(
         SQLite::Statement statement(
             database,
             "INSERT INTO Customers "
-            "(username, password, name, phone_number, active_transactions) "
-            "VALUES (?, ?, ?, ?, ?)"
+            "(username, password, name, phone_number) "
+            "VALUES (?, ?, ?, ?)"
         );
         statement.bind(1, username);
         statement.bind(2, password);
         statement.bind(3, name);
         statement.bind(4, phoneNumber);
-        statement.bind(5, "");
         statement.exec();
 
         return {

@@ -25,8 +25,7 @@ void initializeDatabase(const string& databasePath) {
             username VARCHAR(30) NOT NULL UNIQUE,
             password VARCHAR(30) NOT NULL,
             name VARCHAR(50) NOT NULL,
-            phone_number VARCHAR(20),
-            active_transactions VARCHAR(50)
+            phone_number VARCHAR(20)
         );
 
         CREATE TABLE IF NOT EXISTS Vehicles (
@@ -130,6 +129,10 @@ void initializeDatabase(const string& databasePath) {
         database.exec(
             "ALTER TABLE Reservations ADD COLUMN overdue_fee DOUBLE NOT NULL DEFAULT 0"
         );
+    } catch (const SQLite::Exception&) {
+    }
+    try {
+        database.exec("ALTER TABLE Customers DROP COLUMN active_transactions");
     } catch (const SQLite::Exception&) {
     }
     try {
