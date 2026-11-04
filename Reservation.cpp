@@ -1,6 +1,7 @@
 #include "Reservation.h"
 
 #include <ctime>
+#include <algorithm>
 #include <iomanip>
 #include <sstream>
 #include <utility>
@@ -115,7 +116,7 @@ string Reservation::statusForDate(
     const string& today
 ) {
     if (dateValue(today) >= dateValue(startDate)) {
-        if (dateValue(today) >= dateValue(endDate)) {
+        if (dateValue(today) > dateValue(endDate)) {
             return "Overdue";
         }
         return "Active";
@@ -136,4 +137,12 @@ string Reservation::todayDate() {
     ostringstream date;
     date << put_time(&localTime, "%Y-%m-%d");
     return date.str();
+}
+
+// Calculate the overdue days - end date between checkout date.
+int Reservation::overdueDays(
+    const string& endDate,
+    const string& checkoutDate
+) {
+    return max(0, daysBetween(endDate, checkoutDate) - 1);
 }

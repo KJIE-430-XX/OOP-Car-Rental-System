@@ -222,6 +222,7 @@ crow::json::wvalue reservationJson(SQLite::Statement& query) {
     result["end_date"] = query.getColumn(3).getString();
     result["total_fee"] = query.getColumn(4).getDouble();
     result["status"] = query.getColumn(5).getString();
+    result["overdue_fee"] = query.getColumn(6).getDouble();
     return result;
 }
 
@@ -438,9 +439,9 @@ int main() {
             SQLite::Statement query(
                 database,
                 administrator
-                    ? "SELECT reservation_id, vehicle_id, start_date, end_date, total_fee, status "
+                    ? "SELECT reservation_id, vehicle_id, start_date, end_date, total_fee, status, overdue_fee "
                       "FROM Reservations ORDER BY reservation_id DESC"
-                    : "SELECT reservation_id, vehicle_id, start_date, end_date, total_fee, status "
+                    : "SELECT reservation_id, vehicle_id, start_date, end_date, total_fee, status, overdue_fee "
                       "FROM Reservations WHERE customer_id = ? ORDER BY reservation_id DESC"
             );
             if (!administrator) {
@@ -475,7 +476,7 @@ int main() {
                 "SELECT r.reservation_id, r.customer_id, r.vehicle_id, "
                 "r.start_date, r.end_date, r.total_fee, r.status, "
                 "r.checkout_date, v.license_plate, v.brand, v.model, "
-                "v.description, v.vehicle_type, v.daily_rate "
+                "v.description, v.vehicle_type, v.daily_rate, r.overdue_fee "
                 "FROM Reservations r "
                 "JOIN Vehicles v ON v.vehicle_id = r.vehicle_id "
                 "WHERE r.reservation_id = ?"
@@ -506,6 +507,7 @@ int main() {
             result["description"] = query.getColumn(11).getString();
             result["category"] = query.getColumn(12).getString();
             result["daily_rate"] = query.getColumn(13).getDouble();
+            result["overdue_fee"] = query.getColumn(14).getDouble();
 
             // Retrieve the Vehicle Damage Report for specific reservation
             SQLite::Statement report(
