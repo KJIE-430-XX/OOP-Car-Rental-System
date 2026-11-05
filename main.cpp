@@ -29,6 +29,7 @@ link: http://localhost:18080/
 using namespace std;
 
 string readFile(const string& path);
+string readBinaryFile(const string& path);
 
 namespace {
 const string databasePath = "car_rental.db";
@@ -218,11 +219,16 @@ crow::json::wvalue reservationJson(SQLite::Statement& query) {
     crow::json::wvalue result;
     result["id"] = query.getColumn(0).getInt();
     result["vehicle_id"] = query.getColumn(1).getInt();
-    result["start_date"] = query.getColumn(2).getString();
-    result["end_date"] = query.getColumn(3).getString();
-    result["total_fee"] = query.getColumn(4).getDouble();
-    result["status"] = query.getColumn(5).getString();
-    result["overdue_fee"] = query.getColumn(6).getDouble();
+    result["vehicle_name"] = query.getColumn(2).getString();
+    result["start_date"] = query.getColumn(3).getString();
+    result["end_date"] = query.getColumn(4).getString();
+    result["total_fee"] = query.getColumn(5).getDouble();
+    result["status"] = query.getColumn(6).getString();
+    result["overdue_fee"] = query.getColumn(7).getDouble();
+    result["customer_name"] = query.getColumn(8).getString();
+    result["customer_username"] = query.getColumn(9).getString();
+    result["customer_phone"] = query.getColumn(10).getString();
+    result["customer_id"] = query.getColumn(11).getInt();
     return result;
 }
 
@@ -275,6 +281,13 @@ void updateAutomaticReservationStatuses() {
 
 string readFile(const string& path) {
     ifstream file(path);
+    stringstream buffer;
+    buffer << file.rdbuf();
+    return buffer.str();
+}
+
+string readBinaryFile(const string& path) {
+    ifstream file(path, ios::binary);
     stringstream buffer;
     buffer << file.rdbuf();
     return buffer.str();
@@ -369,6 +382,24 @@ int main() {
         return res;
     });
 
+    CROW_ROUTE(app, "/category_image/standard_car.jpg")([]() {
+        crow::response res(readBinaryFile("category_image/standard_car.jpg"));
+        res.set_header("Content-Type", "image/jpeg");
+        return res;
+    });
+
+    CROW_ROUTE(app, "/category_image/luxury_car.jpg")([]() {
+        crow::response res(readBinaryFile("category_image/luxury_car.jpg"));
+        res.set_header("Content-Type", "image/jpeg");
+        return res;
+    });
+
+    CROW_ROUTE(app, "/category_image/suv.jpeg")([]() {
+        crow::response res(readBinaryFile("category_image/suv.jpeg"));
+        res.set_header("Content-Type", "image/jpeg");
+        return res;
+    });
+
     CROW_ROUTE(app, "/api/login").methods(crow::HTTPMethod::POST)
     ([&authenticationService](const crow::request& req) {
         auto body = crow::json::load(req.body);
@@ -439,10 +470,20 @@ int main() {
             SQLite::Statement query(
                 database,
                 administrator
-                    ? "SELECT reservation_id, vehicle_id, start_date, end_date, total_fee, status, overdue_fee "
-                      "FROM Reservations ORDER BY reservation_id DESC"
-                    : "SELECT reservation_id, vehicle_id, start_date, end_date, total_fee, status, overdue_fee "
-                      "FROM Reservations WHERE customer_id = ? ORDER BY reservation_id DESC"
+                    ? "SELECT r.reservation_id, r.vehicle_id, "
+                      "TRIM(COALESCE(v.brand, '') || ' ' || COALESCE(v.model, '')) AS vehicle_name, "
+                      "r.start_date, r.end_date, r.total_fee, r.status, r.overdue_fee, "
+                      "c.name, c.username, COALESCE(c.phone_number, ''), r.customer_id "
+                      "FROM Reservations r JOIN Vehicles v ON v.vehicle_id = r.vehicle_id "
+                      "JOIN Customers c ON c.customer_id = r.customer_id "
+                      "ORDER BY r.reservation_id DESC"
+                    : "SELECT r.reservation_id, r.vehicle_id, "
+                      "TRIM(COALESCE(v.brand, '') || ' ' || COALESCE(v.model, '')) AS vehicle_name, "
+                      "r.start_date, r.end_date, r.total_fee, r.status, r.overdue_fee, "
+                      "c.name, c.username, COALESCE(c.phone_number, ''), r.customer_id "
+                      "FROM Reservations r JOIN Vehicles v ON v.vehicle_id = r.vehicle_id "
+                      "JOIN Customers c ON c.customer_id = r.customer_id "
+                      "WHERE r.customer_id = ? ORDER BY r.reservation_id DESC"
             );
             if (!administrator) {
                 query.bind(1, customerIdFromRequest(request));
@@ -457,6 +498,88 @@ int main() {
             return crow::response(200, responseBody);
         } catch (const SQLite::Exception&) {
             return jsonMessage(500, "Unable to load reservations.");
+        }
+    });
+
+    CROW_ROUTE(app, "/api/reservations/<int>")
+        .methods(crow::HTTPMethod::DELETE)
+    ([](const crow::request& request, int reservationId) {
+        if (!isAuthenticated(request)) {
+            return jsonMessage(401, "Authentication is required.");
+        }
+        try {
+            SQLite::Database database(databasePath, SQLite::OPEN_READWRITE);
+            SQLite::Transaction transaction(database);
+            const bool administrator = isAdministrator(request);
+
+            SQLite::Statement reservation(
+                database,
+                "SELECT vehicle_id, customer_id, status "
+                "FROM Reservations WHERE reservation_id = ?"
+            );
+            reservation.bind(1, reservationId);
+            if (!reservation.executeStep()) {
+                return jsonMessage(404, "Booking not found.");
+            }
+            const string vehicleId = reservation.getColumn(0).getString();
+            const int ownerId = reservation.getColumn(1).getInt();
+            if (!administrator && ownerId != customerIdFromRequest(request)) {
+                return jsonMessage(403, "You can only cancel your own booking.");
+            }
+            if (reservation.getColumn(2).getString() != "Confirmed") {
+                return jsonMessage(
+                    409, "Only confirmed bookings can be cancelled.");
+            }
+
+            if (administrator) {
+                SQLite::Statement deleteItems(
+                    database,
+                    "DELETE FROM Damage_items WHERE report_id IN ("
+                    "SELECT report_id FROM Damage_reports WHERE reservation_id = ?)"
+                );
+                deleteItems.bind(1, reservationId);
+                deleteItems.exec();
+
+                SQLite::Statement deleteReport(
+                    database,
+                    "DELETE FROM Damage_reports WHERE reservation_id = ?"
+                );
+                deleteReport.bind(1, reservationId);
+                deleteReport.exec();
+
+                SQLite::Statement deleteReservation(
+                    database,
+                    "DELETE FROM Reservations WHERE reservation_id = ?"
+                );
+                deleteReservation.bind(1, reservationId);
+                deleteReservation.exec();
+            } else {
+                SQLite::Statement cancelReservation(
+                    database,
+                    "UPDATE Reservations SET status = 'Cancelled' "
+                    "WHERE reservation_id = ? AND status = 'Confirmed'"
+                );
+                cancelReservation.bind(1, reservationId);
+                cancelReservation.exec();
+            }
+
+            SQLite::Statement releaseVehicle(
+                database,
+                "UPDATE Vehicles SET status = 'Available' "
+                "WHERE vehicle_id = ? AND status = 'Rented' "
+                "AND NOT EXISTS ("
+                "SELECT 1 FROM Reservations "
+                "WHERE vehicle_id = ? AND status IN ('Confirmed', 'Active', 'Overdue')"
+                ")"
+            );
+            releaseVehicle.bind(1, vehicleId);
+            releaseVehicle.bind(2, vehicleId);
+            releaseVehicle.exec();
+
+            transaction.commit();
+            return jsonMessage(200, "Booking cancelled successfully.");
+        } catch (const SQLite::Exception&) {
+            return jsonMessage(500, "Unable to cancel booking.");
         }
     });
 
@@ -507,7 +630,16 @@ int main() {
             result["description"] = query.getColumn(11).getString();
             result["category"] = query.getColumn(12).getString();
             result["daily_rate"] = query.getColumn(13).getDouble();
-            result["overdue_fee"] = query.getColumn(14).getDouble();
+            const double overdueFee = query.getColumn(14).getDouble();
+            const string checkoutDate = query.getColumn(7).isNull()
+                ? "" : query.getColumn(7).getString();
+            const int overdueDays = checkoutDate.empty()
+                ? 0 : Reservation::overdueDays(
+                    query.getColumn(4).getString(), checkoutDate);
+            result["overdue_fee"] = overdueFee;
+            result["overdue_days"] = overdueDays;
+            result["overdue_daily_fee"] = overdueDays > 0
+                ? overdueFee / overdueDays : 0.0;
 
             // Retrieve the Vehicle Damage Report for specific reservation
             SQLite::Statement report(

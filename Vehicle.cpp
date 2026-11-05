@@ -261,7 +261,8 @@ RentalOperationResult RentalSystem::createReservation(
     SQLite::Statement overlappingReservation(
         database,
         "SELECT 1 FROM Reservations "
-        "WHERE vehicle_id = ? AND status != 'Completed' "
+        "WHERE vehicle_id = ? "
+        "AND status IN ('Confirmed', 'Active', 'Overdue') "
         "AND start_date <= ? AND end_date >= ? LIMIT 1"
     );
     overlappingReservation.bind(1, vehicleId);
