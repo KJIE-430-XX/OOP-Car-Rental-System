@@ -47,8 +47,13 @@ add_executable(CarRentalSystem
     OverdueFee.cpp
 )
 
+add_executable(QueryRunner
+    QueryRunner.cpp
+)
+
 # Link to the Crow Library
 target_link_libraries(CarRentalSystem PRIVATE Crow::Crow SQLiteCpp)
+target_link_libraries(QueryRunner PRIVATE SQLiteCpp)
 
 include(CTest)
 enable_testing()

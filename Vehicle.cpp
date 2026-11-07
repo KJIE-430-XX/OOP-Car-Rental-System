@@ -114,8 +114,9 @@ bool Vehicle::markUnderMaintenance(
     SQLite::Statement record(
         database,
         "INSERT INTO Maintenance_records "
-        "(vehicle_id, started_by_admin_id, started_by_username, notes, previous_maintenance_id) "
-        "VALUES (?, ?, ?, ?, ?)"
+        "(vehicle_id, started_at, started_by_admin_id, started_by_username, notes, "
+        "previous_maintenance_id) "
+        "VALUES (?, datetime('now', '+8 hours'), ?, ?, ?, ?)"
     );
     record.bind(1, id_);
     record.bind(2, administratorId);
@@ -165,7 +166,7 @@ bool Vehicle::markAvailable(
     SQLite::Statement record(
         database,
         "UPDATE Maintenance_records "
-        "SET ended_at = datetime('now'), ended_by_admin_id = ?, ended_by_username = ?, "
+        "SET ended_at = datetime('now', '+8 hours'), ended_by_admin_id = ?, ended_by_username = ?, "
         "completion_notes = ? "
         "WHERE vehicle_id = ? AND ended_at IS NULL"
     );
@@ -194,7 +195,8 @@ void RentalSystem::addVehicle(unique_ptr<Vehicle> vehicle) {
     if (vehicle) {
         // Store the vehicle using its ID as the key
         // std::move transfers ownership of the unique_ptr into the map
-        vehicleMap_[vehicle->id()] = std::move(vehicle);
+        const string vehicleId = vehicle->id();
+        vehicleMap_[vehicleId] = std::move(vehicle);
     }
 }
 
@@ -261,7 +263,8 @@ RentalOperationResult RentalSystem::createReservation(
     SQLite::Statement overlappingReservation(
         database,
         "SELECT 1 FROM Reservations "
-        "WHERE vehicle_id = ? AND status != 'Completed' "
+        "WHERE vehicle_id = ? "
+        "AND status IN ('Confirmed', 'Active', 'Overdue') "
         "AND start_date <= ? AND end_date >= ? LIMIT 1"
     );
     overlappingReservation.bind(1, vehicleId);
@@ -363,7 +366,7 @@ RentalOperationResult RentalSystem::checkoutVehicle(
     // Update the reservation status to 'Pending Inspection' and checkout date is now
     SQLite::Statement updateReservation(
         database,
-        "UPDATE Reservations SET status = 'Pending Inspection', checkout_date = date('now'), "
+        "UPDATE Reservations SET status = 'Pending Inspection', checkout_date = date('now', '+8 hours'), "
         "return_mileage = ?, overdue_fee = ? "
         "WHERE reservation_id = ? AND status IN ('Confirmed', 'Active', 'Overdue')"
     );

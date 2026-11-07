@@ -169,8 +169,17 @@ select:focus {
   background: var(--accent-hover);
 }
 
+.danger-button {
+  background: #DC2626;
+}
+
+.danger-button:hover {
+  background: #B91C1C;
+}
+
 .button-link {
   cursor: pointer;
+  border-radius: 5px;
 }
 
 .submit-button:focus-visible,
@@ -277,6 +286,7 @@ select:focus {
   background: var(--accent);
   border: 0;
   text-decoration: none;
+  margin-top: 18px;
 }
 
 .form-footer a{
@@ -499,6 +509,7 @@ select:focus {
 }
 
 .vehicle-image {
+  position: relative;
   display: flex;
   align-items: flex-end;
   justify-content: flex-end;
@@ -506,6 +517,21 @@ select:focus {
   padding: 18px;
   color: #FFFFFF;
   background: var(--primary);
+}
+
+.vehicle-cover {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.vehicle-image::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(transparent 45%, rgba(15, 23, 42, 0.65));
+  content: '';
 }
 
 .standard-card .vehicle-image {
@@ -521,6 +547,8 @@ select:focus {
 }
 
 .vehicle-image span {
+  position: relative;
+  z-index: 1;
   font-family: Arial, sans-serif;
   font-size: 0.78rem;
   font-weight: 700;
@@ -682,6 +710,40 @@ select:focus {
   margin: 0;
 }
 
+.maintenance-history {
+  grid-column: 1 / -1;
+  margin-top: 24px;
+  padding: 24px;
+  background: #FFFFFF;
+  border: 1px solid var(--border);
+}
+
+.maintenance-history-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.maintenance-history-heading h3 {
+  margin: 0;
+  font-weight: 400;
+}
+
+.maintenance-empty {
+  margin: 0;
+  padding: 18px;
+  color: var(--text-secondary);
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  font-family: Arial, sans-serif;
+}
+
+.maintenance-history .reservation-table {
+  min-width: 900px;
+}
+
 .vehicle-actions .button-link {
   padding: 8px 12px;
   color: #FFFFFF;
@@ -759,39 +821,216 @@ select:focus {
 
 .reservation-list {
   margin-top: 34px;
+  padding: 28px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 16px 40px rgba(30, 27, 75, 0.08);
 }
 
-.reservation-list h2 {
-  font-size: 1.45rem;
+.reservation-list-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 22px;
+}
+
+.reservation-list-heading h2 {
+  margin: 0;
+  font-size: 1.65rem;
   font-weight: 400;
 }
 
-.reservation-item {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
-  align-items: center;
-  padding: 14px 0;
-  border-bottom: 1px solid var(--border);
+.reservation-count {
+  color: var(--text-secondary);
   font-family: Arial, sans-serif;
-  font-size: 0.86rem;
+  font-size: 0.82rem;
+  font-weight: 700;
 }
 
-.reservation-item-link {
-  display: flex;
-  flex: 1;
-  flex-wrap: wrap;
-  gap: 14px;
-  color: inherit;
+.reservation-status-section + .reservation-status-section {
+  margin-top: 28px;
+}
+
+.reservation-status-section h3 {
+  margin: 0 0 12px;
+  font-size: 1.15rem;
+  font-weight: 400;
+}
+
+.reservation-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.reservation-table {
+  width: 100%;
+  min-width: 700px;
+  border-collapse: collapse;
+  font-family: Arial, sans-serif;
+}
+
+.reservation-table th {
+  padding: 15px 18px;
+  color: var(--text-secondary);
+  background: var(--surface-alt);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.reservation-table td {
+  padding: 18px;
+  border-top: 1px solid var(--border);
+  font-size: 0.88rem;
+  vertical-align: middle;
+}
+
+.reservation-table tbody tr {
+  transition: background-color 160ms ease;
+}
+
+.reservation-table tbody tr:hover {
+  background: #FFFFFF;
+}
+
+.reservation-vehicle-link,
+.reservation-view-link {
+  color: var(--primary);
+  font-weight: 700;
   text-decoration: none;
 }
 
-.reservation-item-link:hover {
+.reservation-vehicle-link:hover,
+.reservation-view-link:hover {
   color: var(--accent);
 }
 
-.reservation-item .button-link {
-  margin-left: auto;
+.reservation-date {
+  display: inline-flex;
+  gap: 7px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.reservation-table td strong {
+  display: block;
+  color: var(--primary);
+}
+
+.reservation-table td small {
+  display: block;
+  margin-top: 5px;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+}
+
+.reservation-status {
+  display: inline-flex;
+  padding: 6px 10px;
+  color: var(--accent-focus);
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.reservation-status-completed {
+  color: #FFFFFF;
+  background: #166534;
+  border-color: #166534;
+}
+
+.reservation-status-overdue {
+  color: #FFFFFF;
+  background: #DC2626;
+  border-color: #DC2626;
+}
+
+.reservation-status-active {
+  color: #FFFFFF;
+  background: #16A34A;
+  border-color: #16A34A;
+}
+
+.reservation-status-confirmed {
+  color: #FFFFFF;
+  background: #2563EB;
+  border-color: #2563EB;
+}
+
+.reservation-status-awaiting-payment {
+  color: #854D0E;
+  background: #FEF08A;
+  border-color: #EAB308;
+}
+
+.reservation-status-cancelled {
+  color: #FFFFFF;
+  background: #64748B;
+  border-color: #64748B;
+}
+
+.reservation-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  white-space: nowrap;
+}
+
+.reservation-actions .button-link {
+  padding: 8px 12px;
+  color: #FFFFFF;
+  background: var(--accent);
+  border: 0;
+  border-radius: 7px;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+#edit-vehicle {
+  background-color: #64748B;
+}
+
+#mark-under-maintenance {
+  background-color: #F59E0B;
+}
+
+.reservation-actions .button-link:hover {
+  background: var(--accent-hover);
+}
+
+.reservation-actions .danger-link {
+  color: #FFFFFF;
+  background: #DC2626;
+}
+
+.reservation-actions .danger-link:hover {
+  background: #B91C1C;
+}
+
+.reservation-empty {
+  margin: 0;
+  color: var(--text-secondary);
+  font-family: Arial, sans-serif;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .reservation-details {
@@ -966,6 +1205,15 @@ select:focus {
 @media (max-width: 700px) {
   .vehicle-item {
     display: block;
+  }
+
+  .reservation-list {
+    padding: 20px 14px;
+  }
+
+  .reservation-list-heading {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .vehicle-actions {

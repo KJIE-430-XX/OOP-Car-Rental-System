@@ -62,6 +62,19 @@ function escapeHtml(value) {
   }[character]));
 }
 
+function reservationStatusClass(status) {
+  const statusClasses = {
+    Completed: 'reservation-status-completed',
+    Overdue: 'reservation-status-overdue',
+    Cancelled: 'reservation-status-cancelled',
+    Active: 'reservation-status-active',
+    Confirmed: 'reservation-status-confirmed',
+    'Awaiting Payment': 'reservation-status-awaiting-payment'
+  };
+
+  return statusClasses[status] || '';
+}
+
 function updateLuxuryPricingFields(form) {
   const category = form.elements.category;
   const pricingFields = form.querySelector('[data-luxury-pricing-fields]');
@@ -139,13 +152,13 @@ function displayVehicles(vehicles) {
       return;
     }
     list.innerHTML = vehicles.map(vehicle => `
-      <article class="vehicle-item">
+      <article class="vehicle-item" data-vehicle-id="${escapeHtml(vehicle.id)}">
         <div class="vehicle-summary"><p class="vehicle-kicker">${escapeHtml(vehicle.category)}</p><h2>${escapeHtml(vehicle.brand)} ${escapeHtml(vehicle.model)}</h2>
         <p>${escapeHtml(vehicle.description)}</p></div>
         <dl class="vehicle-meta"><div><dt>Plate</dt><dd>${escapeHtml(vehicle.plate)}</dd></div>
-        <div><dt>Status</dt><dd>${escapeHtml(vehicle.status)}</dd></div>
+        <div><dt>Status</dt><dd style="color: ${vehicle.status === 'Under_Maintenance' ? '#F59E0B' : ''}">${escapeHtml(vehicle.status === 'Under_Maintenance' ? 'Under Maintenance' : vehicle.status)}</dd></div>
         <div><dt>Current mileage</dt><dd>${Number(vehicle.mileage).toFixed(1)} km</dd></div>
-        <div><dt>Daily rate</dt><dd>$${Number(vehicle.daily_rate).toFixed(2)}</dd></div></dl>
+        <div><dt>Daily rate</dt><dd>RM ${Number(vehicle.daily_rate).toFixed(2)}</dd></div></dl>
         ${!administratorSession && vehicle.available
           && !activeReservationVehicleIds.has(String(vehicle.id)) ? `
           <div class="vehicle-actions">
@@ -159,13 +172,13 @@ function displayVehicles(vehicles) {
         ` : ''}
         ${administratorSession ? `
           <div class="vehicle-actions">
-            <button class="text-link button-link" type="button" onclick="editVehicle('${escapeHtml(vehicle.id)}')">Edit</button>
+            <button class="text-link button-link" id="edit-vehicle" type="button" onclick="editVehicle('${escapeHtml(vehicle.id)}')">Edit</button>
             <button class="text-link button-link danger-link" type="button" onclick="deleteVehicle('${escapeHtml(vehicle.id)}')">Delete</button>
-            <button class="text-link button-link" type="button" onclick="viewMaintenanceHistory('${escapeHtml(vehicle.id)}')">View maintenance history</button>
+            <button class="text-link button-link" type="button" id="view-maintenance" onclick="viewMaintenanceHistory('${escapeHtml(vehicle.id)}')">View maintenance history</button>
           </div>
           ${vehicle.status === 'Available' || vehicle.status === 'Under_Maintenance' ? `
             <div class="vehicle-maintenance-action">
-              <button class="submit-button" type="button" onclick="toggleVehicleMaintenance('${escapeHtml(vehicle.id)}', '${escapeHtml(vehicle.status)}')">
+              <button class="submit-button" type="button" id="mark-under-maintenance" onclick="toggleVehicleMaintenance('${escapeHtml(vehicle.id)}', '${escapeHtml(vehicle.status)}')">
                 ${vehicle.status === 'Available' ? 'Mark under maintenance' : 'Mark available'}
               </button>
             </div>
@@ -186,7 +199,7 @@ function displayVehicles(vehicles) {
               <option value="Under_Maintenance" ${vehicle.status === 'Under_Maintenance' ? 'selected' : ''}>Under_Maintenance</option>
             </select></label>
             <label>Mileage<input name="mileage" type="number" min="0" step="0.1" value="${escapeHtml(vehicle.mileage)}" required></label>
-            <label>Daily rate<input name="daily_rate" type="number" min="0" step="0.01" value="${escapeHtml(vehicle.daily_rate)}" required></label>
+            <label>Daily rate (RM)<input name="daily_rate" type="number" min="0" step="0.01" value="${escapeHtml(vehicle.daily_rate)}" required></label>
             <div data-luxury-pricing-fields>
               <label>Security deposit<input name="security_deposit" type="number" min="0" step="0.01" value="${escapeHtml(vehicle.security_deposit)}" placeholder="e.g. 500.00"></label>
               <label>Insurance rate<input name="insurance_rate" type="number" min="0" step="0.01" value="${escapeHtml(vehicle.insurance_rate)}" placeholder="e.g. 20.00"></label>
@@ -222,8 +235,18 @@ async function updateVehicle(event) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(Object.fromEntries(new FormData(form)))
     });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.message);
+    const responseText = await response.text();
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      throw new Error(
+        response.ok
+          ? 'The server returned an invalid response. Please restart the application and try again.'
+          : `Unable to update vehicle (${response.status}).`
+      );
+    }
+    if (!response.ok) throw new Error(data.message || 'Unable to update vehicle.');
     result.textContent = data.message;
     result.className = 'result success';
     await loadVehicles();
@@ -273,21 +296,75 @@ async function viewMaintenanceHistory(vehicleId) {
     );
     const data = await response.json();
     if (!response.ok) throw new Error(data.message);
+    const vehicleItem = document.querySelector(
+      `.vehicle-item[data-vehicle-id="${CSS.escape(String(vehicleId))}"]`
+    );
+    if (!vehicleItem) throw new Error('Unable to find the selected vehicle.');
+    const existingHistory = vehicleItem.querySelector('.maintenance-history');
+    if (existingHistory) existingHistory.remove();
     if (!data.records.length) {
-      result.textContent = 'No maintenance records found.';
+      const history = document.createElement('section');
+      history.className = 'maintenance-history';
+      history.innerHTML = `
+        <div class="maintenance-history-heading">
+          <h3>Maintenance history</h3>
+          <button class="text-link button-link" type="button" data-close-maintenance>
+            Close
+          </button>
+        </div>
+        <p class="maintenance-empty">No maintenance records found.</p>
+      `;
+      vehicleItem.append(history);
+      history.querySelector('[data-close-maintenance]').addEventListener('click', () => {
+        history.remove();
+      });
+      result.textContent = '';
       result.className = 'result success';
       return;
     }
 
-    result.textContent = data.records.map(record => {
-      const end = record.ended_at || 'Ongoing';
-      const completionNotes = record.completion_notes
-        ? ` Completion notes: ${record.completion_notes}`
-        : '';
-      return `#${record.id}: ${record.started_at} to ${end}; `
-        + `started by ${record.started_by_username}; `
-        + `${record.notes || 'No notes.'}${completionNotes}`;
-    }).join(' | ');
+    const history = document.createElement('section');
+    history.id = 'maintenance-history';
+    history.className = 'maintenance-history';
+    history.innerHTML = `
+      <div class="maintenance-history-heading">
+        <h3>Maintenance history</h3>
+        <button class="text-link button-link" type="button" data-close-maintenance>
+          Close
+        </button>
+      </div>
+      <div class="reservation-table-wrap">
+        <table class="reservation-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Started</th>
+              <th>Ended</th>
+              <th>Started by</th>
+              <th>Notes</th>
+              <th>Completion notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.records.map(record => `
+              <tr>
+                <td>${escapeHtml(record.id)}</td>
+                <td>${escapeHtml(record.started_at)}</td>
+                <td>${escapeHtml(record.ended_at || 'Ongoing')}</td>
+                <td>${escapeHtml(record.started_by_username)}</td>
+                <td>${escapeHtml(record.notes || 'No notes.')}</td>
+                <td>${escapeHtml(record.completion_notes || '—')}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+    vehicleItem.append(history);
+    history.querySelector('[data-close-maintenance]').addEventListener('click', () => {
+      history.remove();
+    });
+    result.textContent = '';
     result.className = 'result success';
   } catch (error) {
     result.textContent = error.message;
@@ -382,7 +459,8 @@ function chooseBookingDates() {
 }
 
 function showReservationMessage(message, success) {
-  const result = document.getElementById('vehicle-result');
+  const result = document.getElementById('vehicle-result')
+    || document.getElementById('reservation-detail-result');
   if (result) {
     result.textContent = message;
     result.className = `result ${success ? 'success' : 'error'}`;
@@ -481,6 +559,88 @@ function ensureReservationList() {
   return list;
 }
 
+function reservationRow(reservation, adminView) {
+  return `
+    <tr>
+      ${adminView ? `<td>#${escapeHtml(reservation.id)}</td>` : ''}
+      ${adminView ? `<td><strong>${escapeHtml(reservation.customer_name)}</strong><small>${escapeHtml(reservation.customer_phone || 'No phone number')}</small></td>` : ''}
+      <td>
+        <a class="reservation-vehicle-link" href="/reservation.html?id=${encodeURIComponent(reservation.id)}">
+          ${escapeHtml(reservation.vehicle_name || `Vehicle #${reservation.vehicle_id}`)}
+        </a>
+      </td>
+      <td><span class="reservation-date">${escapeHtml(reservation.start_date)} <span aria-hidden="true">TO</span> ${escapeHtml(reservation.end_date)}</span></td>
+      <td>
+        <strong>RM ${Number(reservation.total_fee).toFixed(2)}</strong>
+        ${Number(reservation.overdue_fee) > 0 ? `<small>Overdue: $${Number(reservation.overdue_fee).toFixed(2)}</small>` : ''}
+      </td>
+      <td><span class="reservation-status ${reservationStatusClass(reservation.status)}">${escapeHtml(reservation.status)}</span></td>
+      <td class="reservation-actions">
+        <a class="reservation-view-link" href="/reservation.html?id=${encodeURIComponent(reservation.id)}">View</a>
+        ${!administratorSession && (reservation.status === 'Active' || reservation.status === 'Overdue')
+          ? `<button class="button-link" type="button" onclick="checkoutReservation(${reservation.id})">Check out</button>` : ''}
+        ${!administratorSession && reservation.status === 'Awaiting Payment'
+          ? `<button class="button-link" type="button" onclick="payDamageFee(${reservation.id})">Pay</button>` : ''}
+        ${administratorSession && reservation.status === 'Pending Inspection'
+          ? `<button class="button-link" type="button" onclick="inspectReservation(${reservation.id})">Inspect</button>` : ''}
+        ${(administratorSession || reservation.customer_id === currentCustomerId)
+          && reservation.status === 'Confirmed'
+          ? `<button class="button-link danger-link" type="button" onclick="cancelReservation(${reservation.id})">Cancel</button>` : ''}
+      </td>
+    </tr>
+  `;
+}
+
+function reservationSection(title, reservations, adminView) {
+  if (!reservations.length) return '';
+  return `
+    <section class="reservation-status-section">
+      <h3>${title}</h3>
+      <div class="reservation-table-wrap">
+        <table class="reservation-table">
+          <thead><tr>
+            ${adminView ? '<th>Reservation ID</th>' : ''}
+            ${adminView ? '<th>Customer</th>' : ''}
+            <th>Vehicle</th><th>Rental period</th><th>Total</th><th>Status</th><th><span class="sr-only">Actions</span></th>
+          </tr></thead>
+          <tbody>${reservations.map(reservation => reservationRow(reservation, adminView)).join('')}</tbody>
+        </table>
+      </div>
+    </section>
+  `;
+}
+
+async function cancelReservation(reservationId) {
+  if (!window.confirm('Cancel this booking?')) return;
+
+  try {
+    const response = await fetch(`/api/reservations/${reservationId}`, {
+      method: 'DELETE'
+    });
+    const responseText = await response.text();
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      throw new Error(
+        response.ok
+          ? 'The server returned an invalid cancellation response.'
+          : responseText || `Unable to cancel booking (${response.status}).`
+      );
+    }
+    if (!response.ok) throw new Error(data.message);
+    if (document.body.dataset.reservationPage !== undefined) {
+      window.location.href = '/home.html';
+      return;
+    }
+    await loadVehicles();
+    await loadReservations();
+    showReservationMessage(data.message, true);
+  } catch (error) {
+    showReservationMessage(error.message, false);
+  }
+}
+
 async function loadReservations() {
   if (!document.body.dataset.category) return;
 
@@ -498,29 +658,46 @@ async function loadReservations() {
     );
     displayVehicles(currentVehicles);
     const list = ensureReservationList();
-    list.innerHTML = '<h2>My bookings</h2>' + (
-      data.reservations.length
-        ? data.reservations.map(reservation => `
-          <article class="reservation-item">
-            <a class="reservation-item-link" href="/reservation.html?id=${encodeURIComponent(reservation.id)}">
-              <span>Vehicle #${escapeHtml(reservation.vehicle_id)}</span>
-              <span>${escapeHtml(reservation.start_date)} to ${escapeHtml(reservation.end_date)}</span>
-              <span>$${Number(reservation.total_fee).toFixed(2)}</span>
-              ${Number(reservation.overdue_fee) > 0
-                ? `<span>Overdue fee: $${Number(reservation.overdue_fee).toFixed(2)}</span>`
-                : ''}
-              <span>${escapeHtml(reservation.status)}</span>
-            </a>
-            ${!administratorSession && (reservation.status === 'Active' || reservation.status === 'Overdue')
-              ? `<button class="text-link button-link" type="button" onclick="checkoutReservation(${reservation.id})">Check out</button>`
-              : ''}
-            ${administratorSession && reservation.status === 'Pending Inspection'
-              ? `<button class="text-link button-link" type="button" onclick="inspectReservation(${reservation.id})">Inspect vehicle</button>`
-              : ''}
-          </article>
-        `).join('')
-        : '<p>No bookings yet.</p>'
-    );
+    const adminView = administratorSession;
+    const reservationContent = adminView
+      ? [
+          reservationSection(
+            'Pending inspection',
+            data.reservations.filter(reservation => reservation.status === 'Pending Inspection'),
+            true
+          ),
+          reservationSection(
+            'Active or Confirmed',
+            data.reservations.filter(reservation => (
+              reservation.status === 'Confirmed' || reservation.status === 'Active'
+            )),
+            true
+          ),
+          reservationSection(
+            'Completed or Overdue',
+            data.reservations.filter(reservation => (
+              reservation.status === 'Completed' || reservation.status === 'Overdue'
+                || reservation.status === 'Awaiting Payment'
+            )),
+            true
+          ),
+          reservationSection(
+            'Cancelled',
+            data.reservations.filter(reservation => reservation.status === 'Cancelled'),
+            true
+          )
+        ].join('')
+      : reservationSection('My bookings', data.reservations, false);
+    list.innerHTML = `
+      <div class="reservation-list-heading">
+        <div>
+          <p class="eyebrow">BOOKINGS LIST</p>
+          <h2>${adminView ? 'All reservations' : 'My bookings'}</h2>
+        </div>
+        <span class="reservation-count">${data.reservations.length} booking${data.reservations.length === 1 ? '' : 's'}</span>
+      </div>
+      ${data.reservations.length ? reservationContent : '<p class="reservation-empty">No bookings yet.</p>'}
+    `;
   } catch (error) {
     showReservationMessage(error.message, false);
   }
@@ -550,14 +727,18 @@ async function loadReservationDetails() {
         <div><dt>Status</dt><dd>${escapeHtml(reservation.status)}</dd></div>
         <div><dt>Start date</dt><dd>${escapeHtml(reservation.start_date)}</dd></div>
         <div><dt>End date</dt><dd>${escapeHtml(reservation.end_date)}</dd></div>
-        <div><dt>Daily rate</dt><dd>$${Number(reservation.daily_rate).toFixed(2)}</dd></div>
-        <div><dt>Total fee</dt><dd>$${Number(reservation.total_fee).toFixed(2)}</dd></div>
+        <div><dt>Daily rate</dt><dd>RM ${Number(reservation.daily_rate).toFixed(2)}</dd></div>
+        <div><dt>Total fee</dt><dd>RM ${Number(reservation.total_fee).toFixed(2)}</dd></div>
         ${reservation.checkout_date
           ? `<div><dt>Checkout date</dt><dd>${escapeHtml(reservation.checkout_date)}</dd></div>`
           : ''}
       </dl>
       ${reservation.status === 'Active' || reservation.status === 'Overdue'
         ? `<button class="submit-button" type="button" onclick="checkoutReservationFromDetails(${reservation.id})">Check out vehicle</button>`
+        : ''}
+      ${reservation.status === 'Confirmed'
+        && (administratorSession || reservation.customer_id === currentCustomerId)
+        ? `<button class="submit-button danger-button" type="button" onclick="cancelReservation(${reservation.id})">Cancel booking</button>`
         : ''}
       ${reservation.status === 'Pending Inspection' && administratorSession
         ? `<form class="damage-checklist" onsubmit="submitInspection(event, ${reservation.id})">
@@ -578,25 +759,27 @@ async function loadReservationDetails() {
         ? `<section class="damage-report overdue-report">
             <h3>Overdue fee</h3>
             <p>Your vehicle was returned after the rental end date.</p>
-            <p class="damage-total">Overdue fee: <strong>$${Number(reservation.overdue_fee).toFixed(2)}</strong></p>
+            <p>Overdue days: <strong>${Number(reservation.overdue_days)} day${Number(reservation.overdue_days) === 1 ? '' : 's'}</strong></p>
+            <p>Calculation: <strong>RM ${Number(reservation.overdue_daily_fee).toFixed(2)} x ${Number(reservation.overdue_days)} days = RM ${Number(reservation.overdue_fee).toFixed(2)}</strong></p>
+            <p class="damage-total">Overdue fee: <strong>RM ${Number(reservation.overdue_fee).toFixed(2)}</strong></p>
           </section>`
         : ''}
       ${reservation.status === 'Awaiting Payment' && reservation.damage_items
         ? `<section class="damage-report">
             <h3>Damage report</h3>
             <ul>${reservation.damage_items.map(item => `
-              <li>${escapeHtml(item.component)} <strong>$${Number(item.fee).toFixed(2)}</strong></li>
+              <li>${escapeHtml(item.component)} <strong>RM ${Number(item.fee).toFixed(2)}</strong></li>
             `).join('')}</ul>
-            <p class="damage-total">Damage fee: <strong>$${Number(reservation.damage_fee).toFixed(2)}</strong></p>
+            <p class="damage-total">Damage fee: <strong>RM ${Number(reservation.damage_fee).toFixed(2)}</strong></p>
             ${!administratorSession && reservation.customer_id === currentCustomerId
-              ? `<button class="submit-button" type="button" onclick="payDamageFee(${reservation.id})">Pay damage fee</button>`
+              ? `<button class="submit-button" type="button" onclick="payDamageFee(${reservation.id})">Pay and Checkout</button>`
               : ''}
           </section>`
         : ''}
       ${reservation.status === 'Completed' && reservation.damage_items && reservation.damage_items.length
-        ? `<section class="damage-report"><h3>Paid damage report</h3>
-            <ul>${reservation.damage_items.map(item => `<li>${escapeHtml(item.component)} <strong>$${Number(item.fee).toFixed(2)}</strong></li>`).join('')}</ul>
-            <p class="damage-total">Damage fee paid: <strong>$${Number(reservation.damage_fee).toFixed(2)}</strong></p>
+        ? `<section class="damage-report"><h3>Paid Damage Report</h3>
+            <ul>${reservation.damage_items.map(item => `<li>${escapeHtml(item.component)} <strong>RM ${Number(item.fee).toFixed(2)}</strong></li>`).join('')}</ul>
+            <p class="damage-total">Damage fee paid: <strong>RM ${Number(reservation.damage_fee).toFixed(2)}</strong></p>
           </section>`
         : ''}
     `;
@@ -632,7 +815,7 @@ async function submitInspection(event, reservationId) {
 }
 
 async function payDamageFee(reservationId) {
-  if (!window.confirm('Confirm the dummy payment for this damage fee?')) return;
+  if (!window.confirm('Confirm the dummy payment for this damage fee and overdue fee?')) return;
   try {
     const response = await fetch(`/api/reservations/${reservationId}/damage-payment`, { method: 'POST' });
     const data = await response.json();
@@ -676,7 +859,10 @@ async function deleteVehicle(vehicleId) {
   try {
     const response = await fetch(`/api/vehicles/${encodeURIComponent(vehicleId)}`, { method: 'DELETE' });
     const data = await response.json();
-    if (!response.ok) throw new Error(data.message);
+    if (!response.ok) {
+      window.alert(data.message || 'This vehicle cannot be deleted.');
+      throw new Error(data.message || 'This vehicle cannot be deleted.');
+    }
     result.textContent = data.message;
     result.className = 'result success';
     await loadVehicles();
