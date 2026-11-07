@@ -235,8 +235,18 @@ async function updateVehicle(event) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(Object.fromEntries(new FormData(form)))
     });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.message);
+    const responseText = await response.text();
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      throw new Error(
+        response.ok
+          ? 'The server returned an invalid response. Please restart the application and try again.'
+          : `Unable to update vehicle (${response.status}).`
+      );
+    }
+    if (!response.ok) throw new Error(data.message || 'Unable to update vehicle.');
     result.textContent = data.message;
     result.className = 'result success';
     await loadVehicles();
@@ -552,6 +562,7 @@ function ensureReservationList() {
 function reservationRow(reservation, adminView) {
   return `
     <tr>
+      ${adminView ? `<td>#${escapeHtml(reservation.id)}</td>` : ''}
       ${adminView ? `<td><strong>${escapeHtml(reservation.customer_name)}</strong><small>${escapeHtml(reservation.customer_phone || 'No phone number')}</small></td>` : ''}
       <td>
         <a class="reservation-vehicle-link" href="/reservation.html?id=${encodeURIComponent(reservation.id)}">
@@ -588,6 +599,7 @@ function reservationSection(title, reservations, adminView) {
       <div class="reservation-table-wrap">
         <table class="reservation-table">
           <thead><tr>
+            ${adminView ? '<th>Reservation ID</th>' : ''}
             ${adminView ? '<th>Customer</th>' : ''}
             <th>Vehicle</th><th>Rental period</th><th>Total</th><th>Status</th><th><span class="sr-only">Actions</span></th>
           </tr></thead>
@@ -599,11 +611,7 @@ function reservationSection(title, reservations, adminView) {
 }
 
 async function cancelReservation(reservationId) {
-  if (!window.confirm(
-    administratorSession
-      ? 'Cancel this booking permanently?'
-      : 'Cancel this booking?'
-  )) return;
+  if (!window.confirm('Cancel this booking?')) return;
 
   try {
     const response = await fetch(`/api/reservations/${reservationId}`, {
@@ -764,7 +772,7 @@ async function loadReservationDetails() {
             `).join('')}</ul>
             <p class="damage-total">Damage fee: <strong>RM ${Number(reservation.damage_fee).toFixed(2)}</strong></p>
             ${!administratorSession && reservation.customer_id === currentCustomerId
-              ? `<button class="submit-button" type="button" onclick="payDamageFee(${reservation.id})">Pay damage fee</button>`
+              ? `<button class="submit-button" type="button" onclick="payDamageFee(${reservation.id})">Pay and Checkout</button>`
               : ''}
           </section>`
         : ''}
@@ -851,7 +859,10 @@ async function deleteVehicle(vehicleId) {
   try {
     const response = await fetch(`/api/vehicles/${encodeURIComponent(vehicleId)}`, { method: 'DELETE' });
     const data = await response.json();
-    if (!response.ok) throw new Error(data.message);
+    if (!response.ok) {
+      window.alert(data.message || 'This vehicle cannot be deleted.');
+      throw new Error(data.message || 'This vehicle cannot be deleted.');
+    }
     result.textContent = data.message;
     result.className = 'result success';
     await loadVehicles();

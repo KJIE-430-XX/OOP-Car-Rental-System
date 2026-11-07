@@ -47,6 +47,21 @@ reservation `Completed`, and makes the vehicle available.
 ### Repository
 
 - **GitHub**: [https://github.com/KJIE-430-XX/OOP-Car-Rental-System.git]
+
+## Running a database query for testing
+
+`QueryRunner` is a separate executable for testing SQL queries against the
+SQLite database. It supports both read and write queries:
+
+```text
+cmake --build build --target QueryRunner --config Debug
+build\Debug\QueryRunner.exe car_rental.db "SELECT * FROM Vehicles;"
+build\Debug\QueryRunner.exe car_rental.db "UPDATE Reservations SET start_date = '2026-11-04', end_date = '2026-11-06' WHERE reservation_id = 16;"
+```
+
+The database path is the first argument and the SQL query is the remaining
+argument text. Query results are printed as tab-separated values. For write
+queries, the runner reports the number of affected rows.
 # Return inspection and damage fees
 
 Returning a vehicle records the latest mileage and changes the reservation to

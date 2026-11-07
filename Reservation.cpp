@@ -8,6 +8,18 @@
 
 using namespace std;
 
+namespace {
+constexpr time_t malaysiaUtcOffset = 8 * 60 * 60;
+
+time_t malaysiaDateTime(tm dateTime) {
+#ifdef _WIN32
+    return _mkgmtime(&dateTime);
+#else
+    return timegm(&dateTime);
+#endif
+}
+}
+
 Reservation::Reservation()
     : customerId_(0), totalFee_(0.0) {}
 
@@ -89,10 +101,10 @@ int Reservation::daysBetween(
     end.tm_mday = stoi(endDate.substr(8, 2));
     end.tm_hour = 12;
 
-    // Converting to timestamps
-    // mktime converts a tm into a time_t
-    const time_t startTime = mktime(&start);
-    const time_t endTime = mktime(&end);
+    // Interpret date-only values as UTC calendar dates so the calculation is
+    // independent of the host machine's local timezone.
+    const time_t startTime = malaysiaDateTime(start);
+    const time_t endTime = malaysiaDateTime(end);
     // / (60 * 60 * 24) → divides by 86,400 to get days
     // Seconds --> Days
     return static_cast<int>(difftime(endTime, startTime) / (60 * 60 * 24)) + 1; 
@@ -124,18 +136,18 @@ string Reservation::statusForDate(
     return "Confirmed";
 }
 
-// Member Function: Automatically gets the current local date from the computer and returns it as a string in YYYY-MM-DD format.
+// Member Function: Gets the current Malaysia date (UTC+8) in YYYY-MM-DD format.
 string Reservation::todayDate() {
-    const time_t now = time(nullptr);
-    tm localTime = {};
+    time_t malaysiaNow = time(nullptr) + malaysiaUtcOffset;
+    tm malaysiaTime = {};
 #ifdef _WIN32
-    localtime_s(&localTime, &now);
+    gmtime_s(&malaysiaTime, &malaysiaNow);
 #else
-    localtime_r(&now, &localTime);
+    gmtime_r(&malaysiaNow, &malaysiaTime);
 #endif
 
     ostringstream date;
-    date << put_time(&localTime, "%Y-%m-%d");
+    date << put_time(&malaysiaTime, "%Y-%m-%d");
     return date.str();
 }
 
