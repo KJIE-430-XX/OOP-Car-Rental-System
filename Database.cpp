@@ -80,7 +80,7 @@ void initializeDatabase(const string& databasePath) {
         CREATE TABLE IF NOT EXISTS Maintenance_records (
             maintenance_id INTEGER PRIMARY KEY AUTOINCREMENT,
             vehicle_id INTEGER NOT NULL,
-            started_at VARCHAR(30) NOT NULL DEFAULT (datetime('now')),
+            started_at VARCHAR(30) NOT NULL DEFAULT (datetime('now', '+8 hours')),
             ended_at VARCHAR(30),
             started_by_admin_id INTEGER NOT NULL,
             started_by_username VARCHAR(30) NOT NULL,

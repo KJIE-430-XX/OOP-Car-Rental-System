@@ -6,7 +6,12 @@ cmake --build build
 
 cmake -S . -B build-linux -DCMAKE_BUILD_TYPE=Debug
 cmake --build build-linux -j"$(nproc)"
+
+run system
+------------------
+pkill -f CarRentalSystem
 ./build-linux/CarRentalSystem
+-------------------
 
 link: http://localhost:18080/
 */
@@ -21,14 +26,20 @@ link: http://localhost:18080/
 #include <atomic>
 #include <cstdint>
 #include <fstream>
+#include <iostream>
 #include <memory>
 #include <mutex>
 #include <sstream>
 #include <unordered_map>
 
+#ifdef DELETE
+#undef DELETE
+#endif
+
 using namespace std;
 
 string readFile(const string& path);
+string readBinaryFile(const string& path);
 
 namespace {
 const string databasePath = "car_rental.db";
@@ -218,11 +229,16 @@ crow::json::wvalue reservationJson(SQLite::Statement& query) {
     crow::json::wvalue result;
     result["id"] = query.getColumn(0).getInt();
     result["vehicle_id"] = query.getColumn(1).getInt();
-    result["start_date"] = query.getColumn(2).getString();
-    result["end_date"] = query.getColumn(3).getString();
-    result["total_fee"] = query.getColumn(4).getDouble();
-    result["status"] = query.getColumn(5).getString();
-    result["overdue_fee"] = query.getColumn(6).getDouble();
+    result["vehicle_name"] = query.getColumn(2).getString();
+    result["start_date"] = query.getColumn(3).getString();
+    result["end_date"] = query.getColumn(4).getString();
+    result["total_fee"] = query.getColumn(5).getDouble();
+    result["status"] = query.getColumn(6).getString();
+    result["overdue_fee"] = query.getColumn(7).getDouble();
+    result["customer_name"] = query.getColumn(8).getString();
+    result["customer_username"] = query.getColumn(9).getString();
+    result["customer_phone"] = query.getColumn(10).getString();
+    result["customer_id"] = query.getColumn(11).getInt();
     return result;
 }
 
@@ -275,6 +291,13 @@ void updateAutomaticReservationStatuses() {
 
 string readFile(const string& path) {
     ifstream file(path);
+    stringstream buffer;
+    buffer << file.rdbuf();
+    return buffer.str();
+}
+
+string readBinaryFile(const string& path) {
+    ifstream file(path, ios::binary);
     stringstream buffer;
     buffer << file.rdbuf();
     return buffer.str();
@@ -369,6 +392,24 @@ int main() {
         return res;
     });
 
+    CROW_ROUTE(app, "/category_image/standard_car.jpg")([]() {
+        crow::response res(readBinaryFile("category_image/standard_car.jpg"));
+        res.set_header("Content-Type", "image/jpeg");
+        return res;
+    });
+
+    CROW_ROUTE(app, "/category_image/luxury_car.jpg")([]() {
+        crow::response res(readBinaryFile("category_image/luxury_car.jpg"));
+        res.set_header("Content-Type", "image/jpeg");
+        return res;
+    });
+
+    CROW_ROUTE(app, "/category_image/suv.jpeg")([]() {
+        crow::response res(readBinaryFile("category_image/suv.jpeg"));
+        res.set_header("Content-Type", "image/jpeg");
+        return res;
+    });
+
     CROW_ROUTE(app, "/api/login").methods(crow::HTTPMethod::POST)
     ([&authenticationService](const crow::request& req) {
         auto body = crow::json::load(req.body);
@@ -439,10 +480,20 @@ int main() {
             SQLite::Statement query(
                 database,
                 administrator
-                    ? "SELECT reservation_id, vehicle_id, start_date, end_date, total_fee, status, overdue_fee "
-                      "FROM Reservations ORDER BY reservation_id DESC"
-                    : "SELECT reservation_id, vehicle_id, start_date, end_date, total_fee, status, overdue_fee "
-                      "FROM Reservations WHERE customer_id = ? ORDER BY reservation_id DESC"
+                    ? "SELECT r.reservation_id, r.vehicle_id, "
+                      "TRIM(COALESCE(v.brand, '') || ' ' || COALESCE(v.model, '')) AS vehicle_name, "
+                      "r.start_date, r.end_date, r.total_fee, r.status, r.overdue_fee, "
+                      "c.name, c.username, COALESCE(c.phone_number, ''), r.customer_id "
+                      "FROM Reservations r JOIN Vehicles v ON v.vehicle_id = r.vehicle_id "
+                      "JOIN Customers c ON c.customer_id = r.customer_id "
+                      "ORDER BY r.reservation_id DESC"
+                    : "SELECT r.reservation_id, r.vehicle_id, "
+                      "TRIM(COALESCE(v.brand, '') || ' ' || COALESCE(v.model, '')) AS vehicle_name, "
+                      "r.start_date, r.end_date, r.total_fee, r.status, r.overdue_fee, "
+                      "c.name, c.username, COALESCE(c.phone_number, ''), r.customer_id "
+                      "FROM Reservations r JOIN Vehicles v ON v.vehicle_id = r.vehicle_id "
+                      "JOIN Customers c ON c.customer_id = r.customer_id "
+                      "WHERE r.customer_id = ? ORDER BY r.reservation_id DESC"
             );
             if (!administrator) {
                 query.bind(1, customerIdFromRequest(request));
@@ -457,6 +508,64 @@ int main() {
             return crow::response(200, responseBody);
         } catch (const SQLite::Exception&) {
             return jsonMessage(500, "Unable to load reservations.");
+        }
+    });
+
+    CROW_ROUTE(app, "/api/reservations/<int>")
+        .methods(crow::HTTPMethod::DELETE)
+    ([](const crow::request& request, int reservationId) {
+        if (!isAuthenticated(request)) {
+            return jsonMessage(401, "Authentication is required.");
+        }
+        try {
+            SQLite::Database database(databasePath, SQLite::OPEN_READWRITE);
+            SQLite::Transaction transaction(database);
+            const bool administrator = isAdministrator(request);
+
+            SQLite::Statement reservation(
+                database,
+                "SELECT vehicle_id, customer_id, status "
+                "FROM Reservations WHERE reservation_id = ?"
+            );
+            reservation.bind(1, reservationId);
+            if (!reservation.executeStep()) {
+                return jsonMessage(404, "Booking not found.");
+            }
+            const string vehicleId = reservation.getColumn(0).getString();
+            const int ownerId = reservation.getColumn(1).getInt();
+            if (!administrator && ownerId != customerIdFromRequest(request)) {
+                return jsonMessage(403, "You can only cancel your own booking.");
+            }
+            if (reservation.getColumn(2).getString() != "Confirmed") {
+                return jsonMessage(
+                    409, "Only confirmed bookings can be cancelled.");
+            }
+
+            SQLite::Statement cancelReservation(
+                database,
+                "UPDATE Reservations SET status = 'Cancelled' "
+                "WHERE reservation_id = ? AND status = 'Confirmed'"
+            );
+            cancelReservation.bind(1, reservationId);
+            cancelReservation.exec();
+
+            SQLite::Statement releaseVehicle(
+                database,
+                "UPDATE Vehicles SET status = 'Available' "
+                "WHERE vehicle_id = ? AND status = 'Rented' "
+                "AND NOT EXISTS ("
+                "SELECT 1 FROM Reservations "
+                "WHERE vehicle_id = ? AND status IN ('Confirmed', 'Active', 'Overdue')"
+                ")"
+            );
+            releaseVehicle.bind(1, vehicleId);
+            releaseVehicle.bind(2, vehicleId);
+            releaseVehicle.exec();
+
+            transaction.commit();
+            return jsonMessage(200, "Booking cancelled successfully.");
+        } catch (const SQLite::Exception&) {
+            return jsonMessage(500, "Unable to cancel booking.");
         }
     });
 
@@ -507,7 +616,16 @@ int main() {
             result["description"] = query.getColumn(11).getString();
             result["category"] = query.getColumn(12).getString();
             result["daily_rate"] = query.getColumn(13).getDouble();
-            result["overdue_fee"] = query.getColumn(14).getDouble();
+            const double overdueFee = query.getColumn(14).getDouble();
+            const string checkoutDate = query.getColumn(7).isNull()
+                ? "" : query.getColumn(7).getString();
+            const int overdueDays = checkoutDate.empty()
+                ? 0 : Reservation::overdueDays(
+                    query.getColumn(4).getString(), checkoutDate);
+            result["overdue_fee"] = overdueFee;
+            result["overdue_days"] = overdueDays;
+            result["overdue_daily_fee"] = overdueDays > 0
+                ? overdueFee / overdueDays : 0.0;
 
             // Retrieve the Vehicle Damage Report for specific reservation
             SQLite::Statement report(
@@ -688,7 +806,7 @@ int main() {
                 database,
                 "INSERT INTO Damage_reports "
                 "(reservation_id, vehicle_id, returned_mileage, damage_fee, inspection_date) "
-                "SELECT ?, vehicle_id, return_mileage, 0, date('now') "
+                "SELECT ?, vehicle_id, return_mileage, 0, date('now', '+8 hours') "
                 "FROM Reservations WHERE reservation_id = ?"
             );
             report.bind(1, reservationId);
@@ -779,7 +897,7 @@ int main() {
             SQLite::Transaction transaction(database);
             SQLite::Statement report(
                 database,
-                "UPDATE Damage_reports SET paid = 1, payment_date = date('now') "
+                "UPDATE Damage_reports SET paid = 1, payment_date = date('now', '+8 hours') "
                 "WHERE reservation_id = ? AND paid = 0"
             );
             report.bind(1, reservationId);
@@ -1083,12 +1201,12 @@ int main() {
 
         const string category = body["category"].s();
         const string status = body["status"].s();
-        if (body["maintenance_notes"]
+        if (body.has("maintenance_notes")
             && body["maintenance_notes"].t() != crow::json::type::String) {
             return jsonMessage(400, "Maintenance notes must be text.");
         }
         string maintenanceNotes;
-        if (body["maintenance_notes"]) {
+        if (body.has("maintenance_notes")) {
             maintenanceNotes = body["maintenance_notes"].s();
         }
         // Some validation check
@@ -1103,42 +1221,49 @@ int main() {
             SQLite::Database database(databasePath, SQLite::OPEN_READWRITE);
             SQLite::Transaction transaction(database);
 
-            // Select the edited vehicle first
-            SQLite::Statement currentVehicleQuery(
-                database,
-                "SELECT vehicle_id, license_plate, brand, model, description, vehicle_type, "
-                "status, mileage, daily_rate, security_deposit, insurance_rate "
-                "FROM Vehicles WHERE vehicle_id = ?"
-            );
-            currentVehicleQuery.bind(1, vehicleId);
+            unique_ptr<Vehicle> currentVehicle;
+            {
+                SQLite::Statement currentVehicleQuery(
+                    database,
+                    "SELECT vehicle_id, license_plate, brand, model, description, vehicle_type, "
+                    "status, mileage, daily_rate, security_deposit, insurance_rate "
+                    "FROM Vehicles WHERE vehicle_id = ?"
+                );
+                currentVehicleQuery.bind(1, vehicleId);
 
-            // Error message if not found
-            if (!currentVehicleQuery.executeStep()) {
-                return jsonMessage(404, "Vehicle not found.");
+                if (!currentVehicleQuery.executeStep()) {
+                    return jsonMessage(404, "Vehicle not found.");
+                }
+
+                currentVehicle = makeVehicle(
+                    currentVehicleQuery.getColumn(5).getString(),
+                    currentVehicleQuery.getColumn(0).getString(),
+                    currentVehicleQuery.getColumn(1).getString(),
+                    currentVehicleQuery.getColumn(2).getString(),
+                    currentVehicleQuery.getColumn(3).getString(),
+                    currentVehicleQuery.getColumn(4).getString(),
+                    currentVehicleQuery.getColumn(6).getString(),
+                    currentVehicleQuery.getColumn(7).getDouble(),
+                    currentVehicleQuery.getColumn(8).getDouble(),
+                    currentVehicleQuery.getColumn(9).getDouble(),
+                    currentVehicleQuery.getColumn(10).getDouble()
+                );
             }
-
-            // Validate the category with derived class
-            auto currentVehicle = makeVehicle( // creates the correct Vehicle derived class from a category string
-                currentVehicleQuery.getColumn(5).getString(),
-                currentVehicleQuery.getColumn(0).getString(),
-                currentVehicleQuery.getColumn(1).getString(),
-                currentVehicleQuery.getColumn(2).getString(),
-                currentVehicleQuery.getColumn(3).getString(),
-                currentVehicleQuery.getColumn(4).getString(),
-                currentVehicleQuery.getColumn(6).getString(),
-                currentVehicleQuery.getColumn(7).getDouble(),
-                currentVehicleQuery.getColumn(8).getDouble(),
-                currentVehicleQuery.getColumn(9).getDouble(),
-                currentVehicleQuery.getColumn(10).getDouble()
-            );
             if (!currentVehicle) {
-                return jsonMessage(500, "Unable to load vehicle.");
+                return jsonMessage(
+                    500,
+                    "The vehicle has an unsupported category."
+                );
             }
             if (currentVehicle->status() == "Pending Inspection") {
                 return jsonMessage(
                     409, "This vehicle cannot be edited until its return inspection is paid."
                 );
             }
+            const double mileage = stod(body["mileage"].s());
+            const double dailyRate = stod(body["daily_rate"].s());
+            const double securityDeposit = stod(body["security_deposit"].s());
+            const double insuranceRate = stod(body["insurance_rate"].s());
 
             // Define the statusChangeValid and reuse the function to check
             // Validate whether a vehicle's status can be changed to the status requested
@@ -1184,10 +1309,10 @@ int main() {
             statement.bind(4, body["description"].s());
             statement.bind(5, category);
             statement.bind(6, status);
-            statement.bind(7, stod(body["mileage"].s()));
-            statement.bind(8, stod(body["daily_rate"].s()));
-            statement.bind(9, stod(body["security_deposit"].s()));
-            statement.bind(10, stod(body["insurance_rate"].s()));
+            statement.bind(7, mileage);
+            statement.bind(8, dailyRate);
+            statement.bind(9, securityDeposit);
+            statement.bind(10, insuranceRate);
             statement.bind(11, vehicleId);
             statement.exec();
 
@@ -1206,10 +1331,10 @@ int main() {
                 body["model"].s(),
                 body["description"].s(),
                 status,
-                stod(body["mileage"].s()),
-                stod(body["daily_rate"].s()),
-                stod(body["security_deposit"].s()),
-                stod(body["insurance_rate"].s())
+                mileage,
+                dailyRate,
+                securityDeposit,
+                insuranceRate
             ));
             transaction.commit();
             return jsonMessage(200, "Vehicle updated successfully.");
@@ -1217,8 +1342,22 @@ int main() {
             return jsonMessage(400, "Mileage and rates must be valid numbers.");
         } catch (const out_of_range&) {
             return jsonMessage(400, "Mileage and rates are out of range.");
-        } catch (const SQLite::Exception&) {
-            return jsonMessage(409, "That license plate already exists.");
+        } catch (const SQLite::Exception& error) {
+            cerr << "Vehicle update database error for " << vehicleId << ": "
+                << error.what() << '\n';
+            const string errorMessage = error.what();
+            if (errorMessage.find("UNIQUE constraint failed: Vehicles.license_plate")
+                != string::npos) {
+                return jsonMessage(409, "That license plate already exists.");
+            }
+            return jsonMessage(500, "Unable to update vehicle details.");
+        } catch (const exception& error) {
+            cerr << "Vehicle update failed for " << vehicleId << ": "
+                << error.what() << '\n';
+            return jsonMessage(
+                500,
+                "Unable to update vehicle: " + string(error.what())
+            );
         }
     });
 
@@ -1233,9 +1372,22 @@ int main() {
         }
 
         try {
-
-            // Delete the vehicle from sqlite database where id = vehicleId
             SQLite::Database database(databasePath, SQLite::OPEN_READWRITE);
+            SQLite::Statement reservationCheck(
+                database,
+                "SELECT status FROM Reservations "
+                "WHERE vehicle_id = ? AND status NOT IN ('Completed', 'Cancelled') "
+                "ORDER BY reservation_id LIMIT 1"
+            );
+            reservationCheck.bind(1, vehicleId);
+            if (reservationCheck.executeStep()) {
+                const string reservationStatus = reservationCheck.getColumn(0).getString();
+                const string message = reservationStatus == "Confirmed"
+                    ? "This vehicle has a pending booking and cannot be deleted."
+                    : "This vehicle is currently rented or has an unfinished rental and cannot be deleted.";
+                return jsonMessage(409, message);
+            }
+
             SQLite::Statement statement(database, "DELETE FROM Vehicles WHERE vehicle_id = ?");
             statement.bind(1, vehicleId);
             statement.exec();
