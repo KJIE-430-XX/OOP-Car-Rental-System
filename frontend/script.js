@@ -776,9 +776,11 @@ async function loadReservationDetails() {
               : ''}
           </section>`
         : ''}
-      ${reservation.status === 'Completed' && reservation.damage_items && reservation.damage_items.length
+      ${reservation.status === 'Completed' && reservation.damage_paid
         ? `<section class="damage-report"><h3>Paid Damage Report</h3>
-            <ul>${reservation.damage_items.map(item => `<li>${escapeHtml(item.component)} <strong>RM ${Number(item.fee).toFixed(2)}</strong></li>`).join('')}</ul>
+            ${reservation.damage_items && reservation.damage_items.length
+              ? `<ul>${reservation.damage_items.map(item => `<li>${escapeHtml(item.component)} <strong>RM ${Number(item.fee).toFixed(2)}</strong></li>`).join('')}</ul>`
+              : '<p>No damage recorded.</p>'}
             <p class="damage-total">Damage fee paid: <strong>RM ${Number(reservation.damage_fee).toFixed(2)}</strong></p>
           </section>`
         : ''}

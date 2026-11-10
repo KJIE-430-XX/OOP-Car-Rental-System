@@ -8,6 +8,7 @@
 
 using namespace std;
 
+// Handle Malaysia's UTC+8 timezone and convert a date/time into a Unix timestamp
 namespace {
 constexpr time_t malaysiaUtcOffset = 8 * 60 * 60;
 
