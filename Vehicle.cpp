@@ -77,16 +77,16 @@ bool Vehicle::returnVehicle(double returnedMileage) {
     return true;
 }
 
-bool Vehicle::markUnderMaintenance() {
-    // Only an available vehicle can be marked for maintenance
-    if (status_ != "Available") {
-        return false;
-    }
+// bool Vehicle::markUnderMaintenance() {
+//     // Only an available vehicle can be marked for maintenance
+//     if (status_ != "Available") {
+//         return false;
+//     }
 
-    // Update the vehicle status to Under Maintenance
-    status_ = "Under_Maintenance";
-    return true;
-}
+//     // Update the vehicle status to Under Maintenance
+//     status_ = "Under_Maintenance";
+//     return true;
+// }
 
 // Overloading markUnderMaintenance function with four parameters
 bool Vehicle::markUnderMaintenance(
@@ -140,16 +140,16 @@ bool Vehicle::markUnderMaintenance(
     return true;
 }
 
-bool Vehicle::markAvailable() {
-    // Only a vehicle under maintenance can be marked as available
-    if (status_ != "Under_Maintenance") {
-        return false;
-    }
+// bool Vehicle::markAvailable() {
+//     // Only a vehicle under maintenance can be marked as available
+//     if (status_ != "Under_Maintenance") {
+//         return false;
+//     }
 
-    // Update the vehicle status to Available
-    status_ = "Available";
-    return true;
-}
+//     // Update the vehicle status to Available
+//     status_ = "Available";
+//     return true;
+// }
 
 // Overloading markAvailable function with four parameters
 bool Vehicle::markAvailable(
@@ -387,55 +387,55 @@ RentalOperationResult RentalSystem::checkoutVehicle(
     return RentalOperationResult::Success;
 }
 
-bool RentalSystem::rentVehicle(const string& vehicleId, const string& customerId) {
+// bool RentalSystem::rentVehicle(const string& vehicleId, const string& customerId) {
 
-    // Find the vehicle using its ID
-    Vehicle* vehicle = findVehicle(vehicleId);
+//     // Find the vehicle using its ID
+//     Vehicle* vehicle = findVehicle(vehicleId);
 
-    // Check that the vehicle exists before calling its rentVehicle() function
-    // Return false if the vehicle is not found
-    // Otherwise, return the result of the vehicle class's rental operation
-    return vehicle != nullptr && vehicle->rentVehicle(customerId);
-}
+//     // Check that the vehicle exists before calling its rentVehicle() function
+//     // Return false if the vehicle is not found
+//     // Otherwise, return the result of the vehicle class's rental operation
+//     return vehicle != nullptr && vehicle->rentVehicle(customerId);
+// }
 
-bool RentalSystem::returnVehicle(const string& vehicleId, double returnedMileage) {
+// bool RentalSystem::returnVehicle(const string& vehicleId, double returnedMileage) {
 
-    // Find the vehicle using its ID
-    Vehicle* vehicle = findVehicle(vehicleId);
+//     // Find the vehicle using its ID
+//     Vehicle* vehicle = findVehicle(vehicleId);
 
-    // Check that the vehicle exists before calling its returnVehicle() function
-    // Return false if the vehicle is not found
-    // Otherwise, return the result of the vehicle class's return operation
-    return vehicle != nullptr && vehicle->returnVehicle(returnedMileage);
-}
+//     // Check that the vehicle exists before calling its returnVehicle() function
+//     // Return false if the vehicle is not found
+//     // Otherwise, return the result of the vehicle class's return operation
+//     return vehicle != nullptr && vehicle->returnVehicle(returnedMileage);
+// }
 
 // Perform rent a vehicle
-bool RentalSystem::rentVehicle(
-    SQLite::Database& database,
-    const string& vehicleId,
-    const string& customerId
-) {
-    // Find the vehicle from in-memory hash map
-    Vehicle* vehicle = findVehicle(vehicleId);
-    if (!vehicle || !vehicle->isAvailable() || customerId.empty()) {
-        return false;
-    }
+// bool RentalSystem::rentVehicle(
+//     SQLite::Database& database,
+//     const string& vehicleId,
+//     const string& customerId
+// ) {
+//     // Find the vehicle from in-memory hash map
+//     Vehicle* vehicle = findVehicle(vehicleId);
+//     if (!vehicle || !vehicle->isAvailable() || customerId.empty()) {
+//         return false;
+//     }
 
-    SQLite::Transaction transaction(database);
-    // Update the vehicle into 'Rented'
-    SQLite::Statement update(
-        database,
-        "UPDATE Vehicles SET status = ? WHERE vehicle_id = ?"
-    );
-    update.bind(1, "Rented");
-    update.bind(2, vehicleId);
-    update.exec();
-    if (!vehicle->rentVehicle(customerId)) {
-        return false;
-    }
-    transaction.commit();
-    return true;
-}
+//     SQLite::Transaction transaction(database);
+//     // Update the vehicle into 'Rented'
+//     SQLite::Statement update(
+//         database,
+//         "UPDATE Vehicles SET status = ? WHERE vehicle_id = ?"
+//     );
+//     update.bind(1, "Rented");
+//     update.bind(2, vehicleId);
+//     update.exec();
+//     if (!vehicle->rentVehicle(customerId)) {
+//         return false;
+//     }
+//     transaction.commit();
+//     return true;
+// }
 
 // Perform return vehicle
 bool RentalSystem::returnVehicle(

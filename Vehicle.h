@@ -71,8 +71,8 @@ public:
 
     bool rentVehicle(const string& customerId);
     bool returnVehicle(double returnedMileage);
-    bool markUnderMaintenance();
-    bool markAvailable();
+    // bool markUnderMaintenance();
+    // bool markAvailable();
     bool markUnderMaintenance(
         SQLite::Database& database,
         int administratorId,
@@ -127,18 +127,18 @@ public:
         int customerId,
         bool administrator
     );
-    bool rentVehicle(const string& vehicleId, const string& customerId);
-    bool returnVehicle(const string& vehicleId, double returnedMileage);
-    bool rentVehicle(
-        SQLite::Database& database,
-        const string& vehicleId,
-        const string& customerId
-    );
-    bool returnVehicle(
-        SQLite::Database& database,
-        const string& vehicleId,
-        double returnedMileage
-    );
+    // bool rentVehicle(const string& vehicleId, const string& customerId);
+    // bool returnVehicle(const string& vehicleId, double returnedMileage);
+    // bool rentVehicle(
+    //     SQLite::Database& database,
+    //     const string& vehicleId,
+    //     const string& customerId
+    // );
+    // bool returnVehicle(
+    //     SQLite::Database& database,
+    //     const string& vehicleId,
+    //     double returnedMileage
+    // );
 
 private:
     // Store vehicles in an in-memory hash map
