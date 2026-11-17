@@ -151,21 +151,29 @@ function displayVehicles(vehicles) {
       list.innerHTML = '';
       return;
     }
-    list.innerHTML = vehicles.map(vehicle => `
+    list.innerHTML = vehicles.map(vehicle => {
+      const hasActiveReservation = activeReservationVehicleIds.has(String(vehicle.id));
+      const displayStatus = hasActiveReservation
+        ? 'Rented'
+        : vehicle.status === 'Rented' ? 'Available' : vehicle.status;
+      const canBookVehicle = !administratorSession
+        && !hasActiveReservation
+        && (vehicle.status === 'Available' || vehicle.status === 'Rented');
+
+      return `
       <article class="vehicle-item" data-vehicle-id="${escapeHtml(vehicle.id)}">
         <div class="vehicle-summary"><p class="vehicle-kicker">${escapeHtml(vehicle.category)}</p><h2>${escapeHtml(vehicle.brand)} ${escapeHtml(vehicle.model)}</h2>
         <p>${escapeHtml(vehicle.description)}</p></div>
         <dl class="vehicle-meta"><div><dt>Plate</dt><dd>${escapeHtml(vehicle.plate)}</dd></div>
-        <div><dt>Status</dt><dd style="color: ${vehicle.status === 'Under_Maintenance' ? '#F59E0B' : ''}">${escapeHtml(vehicle.status === 'Under_Maintenance' ? 'Under Maintenance' : vehicle.status)}</dd></div>
+        <div><dt>Status</dt><dd style="color: ${displayStatus === 'Under_Maintenance' ? '#F59E0B' : ''}">${escapeHtml(displayStatus === 'Under_Maintenance' ? 'Under Maintenance' : displayStatus)}</dd></div>
         <div><dt>Current mileage</dt><dd>${Number(vehicle.mileage).toFixed(1)} km</dd></div>
         <div><dt>Daily rate</dt><dd>RM ${Number(vehicle.daily_rate).toFixed(2)}</dd></div></dl>
-        ${!administratorSession && vehicle.available
-          && !activeReservationVehicleIds.has(String(vehicle.id)) ? `
+        ${canBookVehicle ? `
           <div class="vehicle-actions">
             <button class="submit-button" type="button" onclick="bookVehicle('${escapeHtml(vehicle.id)}')">Book vehicle</button>
           </div>
         ` : ''}
-        ${!administratorSession && activeReservationVehicleIds.has(String(vehicle.id)) ? `
+        ${!administratorSession && hasActiveReservation ? `
           <div class="vehicle-actions">
             <span class="vehicle-rented-label">Rented</span>
           </div>
@@ -209,7 +217,8 @@ function displayVehicles(vehicles) {
           </form>
         ` : ''}
       </article>
-    `).join('');
+    `;
+    }).join('');
 
     list.querySelectorAll('.vehicle-edit-form').forEach(form => {
       updateLuxuryPricingFields(form);
