@@ -15,34 +15,8 @@ The project is built using the following technologies:
 - **CSS** - Styling and layout
 - **JavaScript** - Client-side interactivity
 - **C++** - Server-side logic and backend
-
-## Polymorphic rental fees
-
-Rental prices are calculated through `Vehicle::calculateRentalFee(int rentalDays)`,
-so the reservation flow does not need to branch on the vehicle category:
-
-- **StandardCar**: daily rate multiplied by the rental duration, with a 10%
-  discount for rentals of 7 days or more.
-- **LuxuryCar**: daily rate plus the configured insurance rate for each rental
-  day, with the configured security deposit added once.
-- **SUV**: daily rate multiplied by the rental duration, with a 15% extended
-  rental discount for rentals of 7 days or more.
-
-The security deposit and insurance rate are stored per vehicle and are therefore
-configurable when an administrator creates or edits a vehicle.
-
-Reservation creation and checkout are coordinated by `RentalSystem`, which
-owns the SQLite queries and transactions. `Vehicle` remains responsible only
-for validating and changing the state of one vehicle, while `Reservation`
-handles date validation and polymorphic fee calculation. Checkout updates the
-vehicle and reservation records in one database transaction.
-
-Reservation statuses are synchronized before reservation and vehicle API
-operations. A confirmed reservation becomes `Active` when its start date
-arrives, and the vehicle becomes `Rented`. After the end date, the reservation
-becomes `Overdue` but remains open so the customer can provide the actual
-returned mileage. Manual checkout then records the return, marks the
-reservation `Completed`, and makes the vehicle available.
+- **Crow** - Lightweight C++ web framework for handling HTTP requests, routing and REST APIs
+- **SQLite** - Lightweight, file-based relational database used to store and manage application data
 
 ### Repository
 
@@ -72,24 +46,35 @@ You can run this system on your local machine using Docker without manually inst
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Windows/Mac)
 - [Docker Engine](https://docs.docker.com/engine/install/) (Linux)
 
-### 1. Download the Docker Image
+### 1. Clone the Repository
 
 Open your terminal and execute:
 
 ```bash
-docker pull dkhappy/car-rental:1.0
+git clone https://github.com/KJIE-430-XX/OOP-Car-Rental-System.git
 ```
 
-### 2. Run the Application
+Navigate to the project directory:
+
+```bash
+cd YOUR_PROJECT_DIRECTORY
+```
+
+### 2. Build and Run the Application
 
 Execute the following command:
 
 ```bash
-docker run -d \
-  --name car-rental-system \
-  -p 18080:18080 \
-  dkhappy/car-rental:1.0
+docker compose up --build -d
 ```
+
+Docker Compose will automatically:
+- Build the application using the Dockerfile.
+- Create the Docker image.
+- Create the application container.
+- Map port 18080 to your local machine.
+- Create a persistent volume for SQLite database storage.
+- Start the application in the background.
 
 ### 3. Access the System
 
@@ -101,42 +86,51 @@ You can now access the Car Rental Management System.
 
 ### 4. Stop the Application
 
-To stop the running container:
+To stop the application and remove its container, execute:
 
 ```bash
-docker stop car-rental-system
+docker compose down
 ```
 
-To start it again:
+To start the application again:
 
 ```bash
-docker start car-rental-system
+docker compose up -d
 ```
 
-To remove the container:
+To rebuild the application after making source code changes:
 
 ```bash
-docker rm -f car-rental-system
+docker compose up --build -d
 ```
+
+### 5. Database Persistence
+
+The application uses a Docker named volume called `car-rental-data` to store SQLite database files.
+
+Database records will remain available even after stopping or removing the application container.
 
 ## 🛠️ Docker Information
 
 | Item | Description |
 |---|---|
 | Docker Hub Username | dkhappy |
-| Image Name | car-rental |
-| Image Version | 1.0 |
+| Image Name | car-rental-system |
+| Image Version | latest |
 | Container Port | 18080 |
+| Volume Name | car-rental-data |
 | Access URL | http://localhost:18080 |
 
 ## 📝 Notes
 
 - Make sure Docker Desktop or Docker Engine is running before executing the commands.
+- Docker Compose builds the application using the provided Dockerfile.
 - The Docker image contains the application and its required packaged dependencies.
 - No manual installation of the C++ compiler or application libraries is required.
 - The application must be configured to listen on port 18080.
-- Database persistence should be configured to prevent data loss when containers are removed.
+- The Docker volume preserves SQLite database records independently of the container lifecycle.
+- The first build may take longer because Docker needs to download the required base images and dependencies.
 
 ## 📦 Docker Hub
 
-Docker Image: https://hub.docker.com/r/dkhappy/car-rental
+Docker Hub: https://hub.docker.com/r/dkhappy/car-rental
