@@ -15,34 +15,8 @@ The project is built using the following technologies:
 - **CSS** - Styling and layout
 - **JavaScript** - Client-side interactivity
 - **C++** - Server-side logic and backend
-
-## Polymorphic rental fees
-
-Rental prices are calculated through `Vehicle::calculateRentalFee(int rentalDays)`,
-so the reservation flow does not need to branch on the vehicle category:
-
-- **StandardCar**: daily rate multiplied by the rental duration, with a 10%
-  discount for rentals of 7 days or more.
-- **LuxuryCar**: daily rate plus the configured insurance rate for each rental
-  day, with the configured security deposit added once.
-- **SUV**: daily rate multiplied by the rental duration, with a 15% extended
-  rental discount for rentals of 7 days or more.
-
-The security deposit and insurance rate are stored per vehicle and are therefore
-configurable when an administrator creates or edits a vehicle.
-
-Reservation creation and checkout are coordinated by `RentalSystem`, which
-owns the SQLite queries and transactions. `Vehicle` remains responsible only
-for validating and changing the state of one vehicle, while `Reservation`
-handles date validation and polymorphic fee calculation. Checkout updates the
-vehicle and reservation records in one database transaction.
-
-Reservation statuses are synchronized before reservation and vehicle API
-operations. A confirmed reservation becomes `Active` when its start date
-arrives, and the vehicle becomes `Rented`. After the end date, the reservation
-becomes `Overdue` but remains open so the customer can provide the actual
-returned mileage. Manual checkout then records the return, marks the
-reservation `Completed`, and makes the vehicle available.
+- **Crow** - Lightweight C++ web framework for handling HTTP requests, routing and REST APIs
+- **SQLite** - Lightweight, file-based relational database used to store and manage application data
 
 ### Repository
 
@@ -62,27 +36,101 @@ build\Debug\QueryRunner.exe car_rental.db "UPDATE Reservations SET start_date = 
 The database path is the first argument and the SQL query is the remaining
 argument text. Query results are printed as tab-separated values. For write
 queries, the runner reports the number of affected rows.
-# Return inspection and damage fees
 
-Returning a vehicle records the latest mileage and changes the reservation to
-`Pending Inspection`. An administrator then opens the booking, selects damaged
-components from the checklist, and submits the report. Damage fees are
-calculated polymorphically by vehicle category:
+## 🐳 Run Using Docker
 
-- Standard cars use the base repair estimates.
-- SUVs use a 1.15 multiplier for larger components and parts.
-- Luxury cars use a 1.50 multiplier for premium parts and labour.
+You can run this system on your local machine using Docker without manually installing the project's development dependencies.
 
-The customer can review each damaged component and its fee while the booking
-is `Awaiting Payment`. The dummy payment action marks the damage report paid,
-sets the reservation to `Completed`, and makes the vehicle available again.
+### Prerequisites
 
-# Persistent maintenance history
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Windows/Mac)
+- [Docker Engine](https://docs.docker.com/engine/install/) (Linux)
 
-Vehicle maintenance status changes are stored in the `Maintenance_records`
-table. Each maintenance cycle records its start and end timestamps, the
-administrator who performed each transition, maintenance and completion notes,
-and a link to the previous maintenance cycle for that vehicle. Administrators
-can submit notes when changing maintenance status and view the history from
-the vehicle management page or through
-`GET /api/vehicles/<vehicle-id>/maintenance-records`.
+### 1. Clone the Repository
+
+Open your terminal and execute:
+
+```bash
+git clone https://github.com/KJIE-430-XX/OOP-Car-Rental-System.git
+```
+
+Navigate to the project directory:
+
+```bash
+cd YOUR_PROJECT_DIRECTORY
+```
+
+### 2. Build and Run the Application
+
+Execute the following command:
+
+```bash
+docker compose up --build -d
+```
+
+Docker Compose will automatically:
+- Build the application using the Dockerfile.
+- Create the Docker image.
+- Create the application container.
+- Map port 18080 to your local machine.
+- Create a persistent volume for SQLite database storage.
+- Start the application in the background.
+
+### 3. Access the System
+
+Once the container is running, open your web browser and visit:
+
+**http://localhost:18080**
+
+You can now access the Car Rental Management System.
+
+### 4. Stop the Application
+
+To stop the application and remove its container, execute:
+
+```bash
+docker compose down
+```
+
+To start the application again:
+
+```bash
+docker compose up -d
+```
+
+To rebuild the application after making source code changes:
+
+```bash
+docker compose up --build -d
+```
+
+### 5. Database Persistence
+
+The application uses a Docker named volume called `car-rental-data` to store SQLite database files.
+
+Database records will remain available even after stopping or removing the application container.
+
+## 🛠️ Docker Information
+
+| Item | Description |
+|---|---|
+| Docker Hub Username | dkhappy |
+| Image Name | car-rental-system |
+| Image Version | latest |
+| Container Port | 18080 |
+| Volume Name | car-rental-data |
+| Access URL | http://localhost:18080 |
+
+## 📝 Notes
+
+- Make sure Docker Desktop or Docker Engine is running before executing the commands.
+- Docker Compose builds the application using the provided Dockerfile.
+- The Docker image contains the application and its required packaged dependencies.
+- No manual installation of the C++ compiler or application libraries is required.
+- The application must be configured to listen on port 18080.
+- The Docker volume preserves SQLite database records independently of the container lifecycle.
+- The first build may take longer because Docker needs to download the required base images and dependencies.
+
+## 📦 Docker Hub
+
+Docker Hub: https://hub.docker.com/r/dkhappy/car-rental
