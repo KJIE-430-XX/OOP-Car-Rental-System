@@ -39,7 +39,7 @@ Reservation::Reservation(
     endDate_(std::move(endDate)),
     totalFee_(vehicle.calculateRentalFee(daysBetween(startDate_, endDate_))) {}
 
-// Getter - Use this member function to return private data, so we can use Reservation.id (function call) to access them
+// Getter - Use this member function to return private data, so we can use Reservation.id (function call) to access them (Encapsulation)
 const string& Reservation::id() const { return reservationId_; }
 const string& Reservation::vehicleId() const { return vehicleId_; }
 int Reservation::customerId() const { return customerId_; }

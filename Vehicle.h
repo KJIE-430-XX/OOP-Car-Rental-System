@@ -62,6 +62,7 @@ public:
     double securityDeposit() const;
     double insuranceRate() const;
 
+    // Abstraction
     // virtual: the call is resolved at runtime based on the actual object type.
     // = 0: makes it pure virtual, meaning the base class provides no implementation and every concrete derived class must override it.
     // Vehicle v; is invalid

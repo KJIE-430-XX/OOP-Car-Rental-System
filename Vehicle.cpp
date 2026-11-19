@@ -34,7 +34,7 @@ model_(std::move(model)),
     insuranceRate_(insuranceRate) {}
 
 
-// Getters -- Use this member function to return private data, so we can use Vehicle.id (function call) to access them
+// Getters -- Use this member function to return private data, so we can use Vehicle.id (function call) to access them (Encapsulation)
 const string& Vehicle::id() const { return id_; }
 const string& Vehicle::plate() const { return plate_; }
 const string& Vehicle::brand() const { return brand_; }
