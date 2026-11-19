@@ -1,0 +1,14 @@
+services:
+  car-rental-system:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: car-rental-system:latest
+    ports:
+      - "18080:18080"
+    volumes:
+      - car-rental-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  car-rental-data:

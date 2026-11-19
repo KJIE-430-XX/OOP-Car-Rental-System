@@ -62,27 +62,81 @@ build\Debug\QueryRunner.exe car_rental.db "UPDATE Reservations SET start_date = 
 The database path is the first argument and the SQL query is the remaining
 argument text. Query results are printed as tab-separated values. For write
 queries, the runner reports the number of affected rows.
-# Return inspection and damage fees
 
-Returning a vehicle records the latest mileage and changes the reservation to
-`Pending Inspection`. An administrator then opens the booking, selects damaged
-components from the checklist, and submits the report. Damage fees are
-calculated polymorphically by vehicle category:
+## 🐳 Run Using Docker
 
-- Standard cars use the base repair estimates.
-- SUVs use a 1.15 multiplier for larger components and parts.
-- Luxury cars use a 1.50 multiplier for premium parts and labour.
+You can run this system on your local machine using Docker without manually installing the project's development dependencies.
 
-The customer can review each damaged component and its fee while the booking
-is `Awaiting Payment`. The dummy payment action marks the damage report paid,
-sets the reservation to `Completed`, and makes the vehicle available again.
+### Prerequisites
 
-# Persistent maintenance history
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Windows/Mac)
+- [Docker Engine](https://docs.docker.com/engine/install/) (Linux)
 
-Vehicle maintenance status changes are stored in the `Maintenance_records`
-table. Each maintenance cycle records its start and end timestamps, the
-administrator who performed each transition, maintenance and completion notes,
-and a link to the previous maintenance cycle for that vehicle. Administrators
-can submit notes when changing maintenance status and view the history from
-the vehicle management page or through
-`GET /api/vehicles/<vehicle-id>/maintenance-records`.
+### 1. Download the Docker Image
+
+Open your terminal and execute:
+
+```bash
+docker pull dkhappy/car-rental:1.0
+```
+
+### 2. Run the Application
+
+Execute the following command:
+
+```bash
+docker run -d \
+  --name car-rental-system \
+  -p 18080:18080 \
+  dkhappy/car-rental:1.0
+```
+
+### 3. Access the System
+
+Once the container is running, open your web browser and visit:
+
+**http://localhost:18080**
+
+You can now access the Car Rental Management System.
+
+### 4. Stop the Application
+
+To stop the running container:
+
+```bash
+docker stop car-rental-system
+```
+
+To start it again:
+
+```bash
+docker start car-rental-system
+```
+
+To remove the container:
+
+```bash
+docker rm -f car-rental-system
+```
+
+## 🛠️ Docker Information
+
+| Item | Description |
+|---|---|
+| Docker Hub Username | dkhappy |
+| Image Name | car-rental |
+| Image Version | 1.0 |
+| Container Port | 18080 |
+| Access URL | http://localhost:18080 |
+
+## 📝 Notes
+
+- Make sure Docker Desktop or Docker Engine is running before executing the commands.
+- The Docker image contains the application and its required packaged dependencies.
+- No manual installation of the C++ compiler or application libraries is required.
+- The application must be configured to listen on port 18080.
+- Database persistence should be configured to prevent data loss when containers are removed.
+
+## 📦 Docker Hub
+
+Docker Image: https://hub.docker.com/r/dkhappy/car-rental

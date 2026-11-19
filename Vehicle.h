@@ -135,11 +135,11 @@ public:
     //     const string& vehicleId,
     //     const string& customerId
     // );
-    // bool returnVehicle(
-    //     SQLite::Database& database,
-    //     const string& vehicleId,
-    //     double returnedMileage
-    // );
+    bool returnVehicle(
+        SQLite::Database& database,
+        const string& vehicleId,
+        double returnedMileage
+    );
 
 private:
     // Store vehicles in an in-memory hash map

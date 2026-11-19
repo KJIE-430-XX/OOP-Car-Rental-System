@@ -1,0 +1,12 @@
+.git
+.gitignore
+.vscode
+.idea
+build/
+build-linux/
+**/*.exe
+**/*.pdb
+**/*.sln
+**/*.vcxproj*
+**/__pycache__/
+**/*.docx

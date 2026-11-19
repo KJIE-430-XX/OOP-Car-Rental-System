@@ -24,6 +24,7 @@ link: http://localhost:18080/
 #include "Vehicle.h"
 #include <SQLiteCpp/SQLiteCpp.h>
 #include <atomic>
+#include <cstdlib>
 #include <cstdint>
 #include <fstream>
 #include <iostream>
@@ -42,7 +43,10 @@ string readFile(const string& path);
 string readBinaryFile(const string& path);
 
 namespace {
-const string databasePath = "car_rental.db";
+const char* configuredDatabasePath = getenv("DB_PATH");
+const string databasePath = configuredDatabasePath
+    ? configuredDatabasePath
+    : "car_rental.db";
 mutex sessionsMutex;
 struct Session {
     bool administrator;
